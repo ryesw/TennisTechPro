@@ -1,0 +1,23 @@
+# YOLO Custom Dataset
+datasets/
+
+# AI Hub 원본 dataset
+origin/
+
+# test의 이미지 파일
+test/*.jpg
+
+# 참고 ipynb 파일
+ref/
+
+# YOLO와 관련된 파일
+yolo/
+
+# YOLO 학습 진행 log 파일
+runs/
+
+# cache 폴더
+src/__pycache__
+
+# Code Check 용도 파일
+src/check.py
