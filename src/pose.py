@@ -15,7 +15,7 @@ class PoseExtractor:
         self.person_num = person_num  # 단식: 2명, 복식: 4명
         self.box = box # box 표시할건지
         self.PERSON_LABEL = None
-        self.SCORE_MIN = 0.9
+        self.SCORE_MIN = 0.90
         self.keypoint_threshold = 2
         self.data = []
         self.line_width = 2
