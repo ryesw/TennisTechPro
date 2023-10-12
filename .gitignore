@@ -7,6 +7,9 @@ origin/
 # THETIS
 THETIS/
 
+# Keypoints Dataset
+keypoints/
+
 # test의 이미지 파일
 test/*.jpg
 

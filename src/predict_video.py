@@ -24,15 +24,16 @@ bounce = args.bounce
 
 
 # Load videos from videos path
-video_path = 'test/video_input2.mp4'
+video_number = str(1)
+video_path = 'test/video_input' + video_number + '.mp4'
 video = cv2.VideoCapture(video_path)
 
-# get videos properties
+# Get videos properties
 fps, length, v_width, v_height = get_video_properties(video)
 
 # Ouput Video
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-output_video_path = 'output/output2.mp4'
+output_video_path = 'output/output' + video_number + '.mp4'
 output_video = cv2.VideoWriter(output_video_path, fourcc, fps, (v_width, v_height))
 
 dtype = get_dtype()
@@ -72,16 +73,16 @@ while True:
             # then track court
             lines = court_detector.track_court(frame)
         
-        # detect
+        # Detect two players
         frame = player_detector.detect(frame.copy()) # frame vs frame.copy()
 
         player1_boxes = player_detector.player_1_boxes
         player2_boxes = player_detector.player_2_boxes
 
-        # pose estimation
+        # Estimate player's pose
         frame = pose_extractor.extract_pose(frame, player1_boxes, player2_boxes)
         
-        # # ball detect
+        # # Detect ball
         # ball_detector.detect_ball(court_detector.delete_extra_parts(frame))
 
         new_frame = court_detector.draw_court_lines(frame, lines)

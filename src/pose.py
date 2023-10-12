@@ -18,6 +18,7 @@ class PoseExtractor:
         self.SCORE_MIN = 0.9
         self.keypoint_threshold = 2
         self.data = []
+        self.line_width = 2
         self.margin = 50
         self.line_connection = [(7, 9), (7, 5), (10, 8), (8, 6), (6, 5), (15, 13),
                                 (13, 11), (11, 12), (12, 14), (14, 16), (5, 11), (12, 6)] # Court Line
@@ -36,8 +37,8 @@ class PoseExtractor:
         """
         Extract poses from the given image for both players
         """
-        p1_img = self._extract_player1_pose(image, p1_boxes)
-        result = self._extract_player2_pose(p1_img, p2_boxes)
+        result = self._extract_player1_pose(image, p1_boxes)
+        result = self._extract_player2_pose(result, p2_boxes)
 
         return result
 
@@ -84,7 +85,7 @@ class PoseExtractor:
         """
         results = self.pose_model.predict(patch, boxes=False)
         for result in results:
-            annotator = Annotator(patch, line_width=3, pil=True)
+            annotator = Annotator(patch, line_width=self.line_width, pil=True)
             kpts = result.keypoints # get box coordinates in (top, left, bottom, right) format
 
             for kpt in kpts:
@@ -97,11 +98,11 @@ class PoseExtractor:
 
     def save_to_csv(self, output_folder):
         """
-        Saves the pose keypoints data as csv
+        Saves the pose keypoints data as csv file
         :param output_folder: str, path to output folder
         :return: df, the data frame of the pose keypoints
         """
-        columns = self.AIHUB_PERSON_KEYPOINT_NAMES # self.COCO_PERSON_KEYPOINT_NAMES
+        columns = self.COCO_PERSON_KEYPOINT_NAMES
         columns_x = [column + '_x' for column in columns]
         columns_y = [column + '_y' for column in columns]
         df = pd.DataFrame(self.data, columns=columns_x + columns_y) # + self.player
