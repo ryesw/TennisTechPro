@@ -38,7 +38,7 @@ output_video = cv2.VideoWriter(output_video_path, fourcc, fps, (v_width, v_heigh
 
 dtype = get_dtype()
 
-# Court
+# Court Detector
 court_detector = CourtDetector()
 
 # Players tracker
