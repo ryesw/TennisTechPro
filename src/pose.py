@@ -18,7 +18,7 @@ class PoseExtractor:
         self.SCORE_MIN = 0.9
         self.keypoint_threshold = 2
         self.data = []
-        self.margin = 60
+        self.margin = 50
         self.line_connection = [(7, 9), (7, 5), (10, 8), (8, 6), (6, 5), (15, 13),
                                 (13, 11), (11, 12), (12, 14), (14, 16), (5, 11), (12, 6)] # Court Line
         self.COCO_PERSON_KEYPOINT_NAMES = [
@@ -47,14 +47,15 @@ class PoseExtractor:
         Extract the pose of player 1(bottom) from the given image
         """
         height, width = image.shape[:2]
+        
+        if len(p1_boxes) > 0:
+            xt, yt, w, h = p1_boxes[-1]
+            xt, yt, xb, yb = int(xt), int(yt), int(xt + w), int(yt + h)
+            patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
 
-        xt, yt, w, h = p1_boxes[-1]
-        xt, yt, xb, yb = int(xt), int(yt), int(xt + w), int(yt + h)
-        patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
+            p1_patch = self._annotate_pose_on_patch(patch)
 
-        p1_patch = self._annotate_pose_on_patch(patch)
-
-        image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p1_patch
+            image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p1_patch
 
         return image
 
@@ -65,13 +66,14 @@ class PoseExtractor:
         """
         height, width = image.shape[:2]
 
-        xt, yt, w, h = p2_boxes[-1]
-        xt, yt, xb, yb = int(xt), int(yt), int(xt + w), int(yt + h)
-        patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
+        if len(p2_boxes) > 0:
+            xt, yt, w, h = p2_boxes[-1]
+            xt, yt, xb, yb = int(xt), int(yt), int(xt + w), int(yt + h)
+            patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
 
-        p2_patch = self._annotate_pose_on_patch(patch)
-        
-        image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p2_patch
+            p2_patch = self._annotate_pose_on_patch(patch)
+            
+            image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p2_patch
 
         return image
 
