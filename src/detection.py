@@ -3,9 +3,9 @@ from yolo import detection_model
 from ultralytics.utils.plotting import Annotator
 
 class DetectionModel:
-    def __init__(self, match_type, dtype=torch.FloatTensor):
+    def __init__(self, match_type=2, dtype=torch.FloatTensor):
         self.detection_model = detection_model
-        self.match_type = match_type
+        self.match_type = match_type # 단식 2명, 복식 4명
         self.dtype = dtype
         self.PLAYER_1_LABEL = 0
         self.PLAYER_2_LABEL = 1
@@ -19,7 +19,7 @@ class DetectionModel:
         self.BALL_SCORE_MIN = 0.6
         self.v_width = 0 # video_width
         self.v_height = 0 # video_height
-        self.line_thickness = 3
+        self.line_thickness = 2
         self.player_1_boxes = []
         self.player_2_boxes = []
 
@@ -29,20 +29,30 @@ class DetectionModel:
         Use YOLO Model to detect players in the one frame
         """
         results = self.detection_model.predict(image)
-        
+        count = 0
         for result in results:
             annotator = Annotator(image, line_width=self.line_thickness, font_size=None)
 
             boxes = result.boxes
-            for box in boxes:
+            # # Detection Model의 정확도가 높으면 이렇게 해도 OK
+            # for box in boxes:
+            #     cls = int(box.cls.cpu().numpy()) # class 정보: bottom=0, top=1
+            #     pts = box.xyxy[0].cpu().numpy() # box 좌표
+
+            #     if cls == 0:
+            #         self.player_1_boxes.append(pts)
+            #     elif cls == 1:
+            #         self.player_2_boxes.append(pts)
+            for idx, box in enumerate(boxes):
                 cls = int(box.cls.cpu().numpy()) # class 정보: bottom=0, top=1
                 pts = box.xyxy[0].cpu().numpy() # box 좌표
-                if cls == 0:
+
+                if idx == 0:
                     self.player_1_boxes.append(pts)
-                if cls == 1:
+                elif idx == 1:
                     self.player_2_boxes.append(pts)
 
-                # annotator.box_label(pts, self.detection_model.names[cls]) -> Label까지 나오도록 함
+                # annotator.box_label(pts, self.detection_model.names[cls]) -> Label까지 나오도록 하는 Code
                 annotator.box_label(pts, label=False, color=(255, 0, 0))
 
         frame = annotator.result()

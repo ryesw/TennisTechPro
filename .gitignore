@@ -4,6 +4,9 @@ datasets/
 # AI Hub 원본 dataset
 origin/
 
+# THETIS
+THETIS/
+
 # test의 이미지 파일
 test/*.jpg
 

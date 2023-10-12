@@ -9,90 +9,95 @@ import torch
 import numpy as np
 import pandas as pd
 
-def convert(size, bbox):
-  """
-  Convert bounding box coordinates from bbox format to YOLO format.
+def convert_bbox_to_yolo_format(size, bbox):
+    """
+    Convert bounding box coordinates from bbox format to YOLO format.
 
-  Args:
-      size (tuple): Tuple containing the width and height of the image.
-      bbox (list): List containing the coordinates of the bounding box in the format [x, y, w, h].
+    Args:
+        size (tuple): Tuple containing the width and height of the image.
+        bbox (list): List containing the coordinates of the bounding box in the format [x, y, w, h].
 
-  Returns:
-      list: List containing the coordinates of the bounding box in YOLO format [center_x, center_y, w, h].
-  """
-  dw = 1 / size[0]
-  dh = 1 / size[1]
+    Returns:
+        list: List containing the coordinates of the bounding box in YOLO format [center_x, center_y, w, h].
+    """
+    dw = 1 / size[0]
+    dh = 1 / size[1]
 
-  w = bbox[2]
-  h = bbox[3]
-  x = bbox[0]+ (w / 2) # center_x
-  y = bbox[1]+ (h / 2) # center_y
+    w = bbox[2]
+    h = bbox[3]
+    x = bbox[0] + (w / 2) # center_x
+    y = bbox[1] + (h / 2) # center_y
 
-  x = round(x * dw, 6)
-  y = round(y * dh, 6)
-  w = round(w * dw, 6)
-  h = round(h * dh, 6)
+    x = round(x * dw, 6)
+    y = round(y * dh, 6)
+    w = round(w * dw, 6)
+    h = round(h * dh, 6)
 
-  return [x, y, w, h]
+    return [x, y, w, h]
 
 
 def make_yolo_dataset(json_dir, txt_dir, img_size):
-  """
-  Convert JSON annotations to YOLO format and save them as text files.
+    """
+    Convert JSON annotations to YOLO format and save them as text files.
 
-  Args:
-      json_dir (str): Directory containing the JSON annotation files.
-      txt_dir (str): Directory to save the YOLO format text files.
-      img_size (int): Size of the images.
+    Args:
+        json_dir (str): Directory containing the JSON annotation files.
+        txt_dir (str): Directory to save the YOLO format text files.
+        img_size (int): Size of the images.
 
-  Returns:
-      None
-  """
-  for json_name in os.listdir(json_dir):
-    if json_name.endswith('json'):
-      json_path = os.path.join(json_dir, json_name)
-      data = json.load(open(json_path, encoding='utf-8'))
+    Returns:
+        None
+    """
+    for json_name in os.listdir(json_dir):
+        if json_name.endswith('json'):
+            json_path = os.path.join(json_dir, json_name)
+            data = json.load(open(json_path, encoding='utf-8'))
 
-      dataInfo = data['learningDataInfo']
+            dataInfo = data['learningDataInfo']
 
-      # img_name: [테니스, 날짜, (2차 경로), (3차 경로), 카메라번호, 원시데이터일련번호, 동작분석, 시퀀스일련번호, 동작분석클래스, 동작분석일련번호, 이미지일련번호]
-      img_name = json_name.replace('.json', '')
-      class_name = img_name.split('_')[-3] # Pose Estimation에 사용
+            # img_name: [테니스, 날짜, (2차 경로), (3차 경로), 카메라번호, 원시데이터일련번호, 동작분석, 시퀀스일련번호, 동작분석클래스, 동작분석일련번호, 이미지일련번호]
+            img_name = json_name.replace('.json', '')
+            class_name = img_name.split('_')[-3] # Motion Estimation에 사용
 
-      # annotation 정보
-      annotations = dataInfo['annotations']
+            # annotation 정보
+            annotations = dataInfo['annotations']
 
-      # Court and Ball Detection에 사용
-      court_polygon = annotations[0]['polygon']
-      court_type = int(data['rawDataInfo']['courtNumber'].replace('코트', '')) # 코트 Number
-      net_polygon = annotations[1]['polygon']
+            # Court and Ball Detection에 사용
+            court_polygon = annotations[0]['polygon']
+            court_type = int(data['rawDataInfo']['courtNumber'].replace('코트', '')) # 코트 Number
+            net_polygon = annotations[1]['polygon']
 
-      bbox_list = []
+            bbox_list = []
 
-      # Player1: bottom player(아래쪽에 위치한 선수)
-      player1_bbox = annotations[2]['bbox']
-      player1_keypoint = annotations[2]['keypoint']
-      bbox_list.append([1] + convert(img_size, player1_bbox)) # class 1: bottom player
+            # Player1: bottom player(아래쪽에 위치한 선수)
+            player1_bbox = annotations[2]['bbox']
+            bbox_list.append([0] + convert_bbox_to_yolo_format(img_size, player1_bbox)) # class 0: bottom player
 
-      # Player2: top player(위쪽에 위치한 선수)
-      player2_bbox = annotations[3]['bbox']
-      player2_keypoint = annotations[3]['keypoint']
-      bbox_list.append([2] + convert(img_size, player2_bbox)) # class 1: bottom player
+            # Player2: top player(위쪽에 위치한 선수)
+            player2_bbox = annotations[3]['bbox']
+            bbox_list.append([1] + convert_bbox_to_yolo_format(img_size, player2_bbox)) # class 1: top player
 
-      # Save txt file
-      with open(txt_dir + img_name + '.txt', 'w') as f:
-        for bbox in bbox_list:
-          f.write(str(bbox[0]) + ' ' + str(bbox[1]) + ' ' + str(bbox[2]) + ' ' + str(bbox[3]) + ' ' + str(bbox[4]) + '\n')
+            # Save txt file
+            with open(txt_dir + img_name + '.txt', 'w') as f:
+                for bbox in bbox_list:
+                    data = ' '.join(map(str, bbox))
+                    f.write(bbox + '\n')
+                    # f.write(str(bbox[0]) + ' ' + str(bbox[1]) + ' ' + str(bbox[2]) + ' ' + str(bbox[3]) + ' ' + str(bbox[4]) + '\n')
 
 
-# txt file remove
-def remove_txt_file(txt_dir):
-  bbox_txt_list = glob.glob(txt_dir + '*.txt')
-  for i in bbox_txt_list:
-    os.remove(i)
+def remove_txt_files(txt_dir):
+    """
+    Remove text files from the specified directory
+    """
+    bbox_txt_list = glob.glob(txt_dir + '*.txt')
+    for i in bbox_txt_list:
+        os.remove(i)
 
 
 def make_yolo_yml():
+    """
+    Create YOLO configuration file.
+    """
     with open("./yolo/object_classes.txt", "r") as reader:
         lines = reader.readlines()
         classes = [line.strip().split(",")[1] for line in lines]
@@ -107,7 +112,7 @@ def make_yolo_yml():
                   "val": "./datasets/valid",
                 }
 
-    with open("./yolo/config.yaml", "w") as writer:
+    with open("./yolo/detection_config.yaml", "w") as writer:
         yaml.dump(yaml_data, writer)
 
 
@@ -182,3 +187,16 @@ def get_stickman_line_connection():
         (7, 9), (7, 5), (10, 8), (8, 6), (6, 5), (15, 13), (13, 11), (11, 12), (12, 14), (14, 16), (5, 11), (12, 6)
     ]
     return line_connection
+
+
+# img_size = (1920, 1080)
+# match_type = ['cp_ms/', 'cp_ws/'] # 남자 단식, 여자 단식
+# train_txt_dir = './datasets/train/labels/'
+# valid_txt_dir = './datasets/valid/labels/'
+
+# for i in range(2):
+#     train_json_dir = './origin/train/labels/' + match_type[i]
+#     valid_json_dir = './origin/valid/labels/' + match_type[i]
+
+#     make_yolo_dataset(train_json_dir, train_txt_dir, img_size)
+#     make_yolo_dataset(valid_json_dir, valid_txt_dir, img_size)
