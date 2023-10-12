@@ -469,6 +469,19 @@ class CourtDetector:
 
         return self.new_lines
         
+    # 한 frame에서 court에 선을 그리는 함수
+    def draw_court_lines(self, frame, lines):
+        """
+        Draw court lines on the frame
+        """
+        height, width = frame.shape[:2]
+
+        for i in range(0, len(lines), 4):
+            x1, y1, x2, y2 = lines[i], lines[i+1], lines[i+2], lines[i+3]
+            cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0,0,255), 5)
+
+        new_frame = cv2.resize(frame, (width, height))
+        return new_frame
 
 def line_intersection(line1, line2):
     """

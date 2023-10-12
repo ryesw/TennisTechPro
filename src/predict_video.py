@@ -24,7 +24,7 @@ bounce = args.bounce
 
 
 # Load videos from videos path
-video_path = 'test/video_input1.mp4'
+video_path = 'test/video_input2.mp4'
 video = cv2.VideoCapture(video_path)
 
 # get videos properties
@@ -32,7 +32,7 @@ fps, length, v_width, v_height = get_video_properties(video)
 
 # Ouput Video
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-output_video_path = 'output/output1.mp4'
+output_video_path = 'output/output2.mp4'
 output_video = cv2.VideoWriter(output_video_path, fourcc, fps, (v_width, v_height))
 
 dtype = get_dtype()
@@ -64,8 +64,9 @@ while True:
     frame_i += 1
     if ret:
         if frame_i == 1:
-            print('start')
+            print('Start!')
             print('Detecting the court and the players...')
+            print("Estimate player's pose...")
             lines = court_detector.detect(frame)
         else:
             # then track court
@@ -82,12 +83,8 @@ while True:
         
         # # ball detect
         # ball_detector.detect_ball(court_detector.delete_extra_parts(frame))
-        
-        # 한 frame에서 court에 선을 그리는 함수
-        for i in range(0, len(lines), 4):
-            x1, y1, x2, y2 = lines[i], lines[i+1], lines[i+2], lines[i+3]
-            cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0,0,255), 5)
-        new_frame = cv2.resize(frame, (v_width, v_height))
+
+        new_frame = court_detector.draw_court_lines(frame, lines)
         frames.append(new_frame)
             
         output_video.write(new_frame)
