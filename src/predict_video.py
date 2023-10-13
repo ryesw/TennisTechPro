@@ -24,7 +24,7 @@ bounce = args.bounce
 
 
 # Load videos from videos path
-input_video_number = str(1)
+input_video_number = str(5)
 video_path = 'test/video_input' + input_video_number + '.mp4'
 video = cv2.VideoCapture(video_path)
 
@@ -32,7 +32,7 @@ video = cv2.VideoCapture(video_path)
 fps, length, v_width, v_height = get_video_properties(video)
 
 # Ouput Video
-output_video_number = str(153)
+output_video_number = str(5)
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 output_video_path = 'output/output' + output_video_number + '.mp4'
 output_video = cv2.VideoWriter(output_video_path, fourcc, fps, (v_width, v_height))
