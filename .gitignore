@@ -9,6 +9,7 @@ THETIS/
 
 # test의 이미지 파일
 test/*.jpg
+test/*.png
 
 # 참고 ipynb 파일
 ref/
