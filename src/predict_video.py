@@ -24,16 +24,17 @@ bounce = args.bounce
 
 
 # Load videos from videos path
-video_number = str(1)
-video_path = 'test/video_input' + video_number + '.mp4'
+input_video_number = str(1)
+video_path = 'test/video_input' + input_video_number + '.mp4'
 video = cv2.VideoCapture(video_path)
 
 # Get videos properties
 fps, length, v_width, v_height = get_video_properties(video)
 
 # Ouput Video
+output_video_number = str(153)
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-output_video_path = 'output/output' + video_number + '.mp4'
+output_video_path = 'output/output' + output_video_number + '.mp4'
 output_video = cv2.VideoWriter(output_video_path, fourcc, fps, (v_width, v_height))
 
 dtype = get_dtype()
@@ -74,13 +75,14 @@ while True:
             lines = court_detector.track_court(frame)
         
         # Detect two players
-        frame = player_detector.detect(frame.copy()) # frame vs frame.copy()
-
-        player1_boxes = player_detector.player_1_boxes
-        player2_boxes = player_detector.player_2_boxes
+        frame = player_detector.detect(frame) # frame vs frame.copy()
 
         # Estimate player's pose
+        player1_boxes, player2_boxes = player_detector.get_boxes()
         frame = pose_extractor.extract_pose(frame, player1_boxes, player2_boxes)
+
+        # Player Box 초기화
+        player_detector.initialize_box()
         
         # # Detect ball
         # ball_detector.detect_ball(court_detector.delete_extra_parts(frame))
@@ -93,5 +95,9 @@ while True:
         break
 output_video.release()
 print('Finished!')
+
+print('Total Frame: ', frame_i)
+player_detector.print_counts()
+pose_extractor.print_counts()
 
 # ball track code
