@@ -19,7 +19,9 @@ class PoseExtractor:
         self.keypoint_threshold = 2
         self.data = []
         self.line_width = 2
-        self.margin = 50
+        self.margin = 45
+        self.__player_1_count = 0
+        self.__player_2_count = 0
         self.line_connection = [(7, 9), (7, 5), (10, 8), (8, 6), (6, 5), (15, 13),
                                 (13, 11), (11, 12), (12, 14), (14, 16), (5, 11), (12, 6)] # Court Line
         self.COCO_PERSON_KEYPOINT_NAMES = [
@@ -50,13 +52,14 @@ class PoseExtractor:
         height, width = image.shape[:2]
         
         if len(p1_boxes) > 0:
-            xt, yt, w, h = p1_boxes[-1]
-            xt, yt, xb, yb = int(xt), int(yt), int(xt + w), int(yt + h)
+            x1, y1, x2, y2 = p1_boxes[-1]
+            xt, yt, xb, yb = int(x1), int(y1), int(x2), int(y2)
             patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
 
             p1_patch = self._annotate_pose_on_patch(patch)
-
             image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p1_patch
+
+            self.__player_1_count += 1
 
         return image
 
@@ -68,13 +71,14 @@ class PoseExtractor:
         height, width = image.shape[:2]
 
         if len(p2_boxes) > 0:
-            xt, yt, w, h = p2_boxes[-1]
-            xt, yt, xb, yb = int(xt), int(yt), int(xt + w), int(yt + h)
+            x1, y1, x2, y2 = p2_boxes[-1]
+            xt, yt, xb, yb = int(x1), int(y1), int(x2), int(y2)
             patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
-
-            p2_patch = self._annotate_pose_on_patch(patch)
             
+            p2_patch = self._annotate_pose_on_patch(patch)
             image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p2_patch
+
+            self.__player_2_count += 1
 
         return image
 
@@ -86,7 +90,7 @@ class PoseExtractor:
         results = self.pose_model.predict(patch, boxes=False)
         for result in results:
             annotator = Annotator(patch, line_width=self.line_width, pil=True)
-            kpts = result.keypoints # get box coordinates in (top, left, bottom, right) format
+            kpts = result.keypoints
 
             for kpt in kpts:
                 pt = kpt.data[0].cpu().numpy()
@@ -94,6 +98,11 @@ class PoseExtractor:
 
         player_patch = annotator.result()
         return player_patch
+    
+    
+    def print_counts(self):
+        print('Player 1 Pose Estimation Count: ', self.__player_1_count)
+        print('Player 2 Pose Estimation Count: ', self.__player_2_count)
 
 
     def save_to_csv(self, output_folder):
