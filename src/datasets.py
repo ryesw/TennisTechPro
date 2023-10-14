@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from yolo import thetis_model
+from utils import get_video_properties
 
 class ThetisDataset:
     def __init__(self, csv_file=None, root_dir=None, transform=None, train=True, use_features=True, class_names=True,
@@ -14,11 +15,11 @@ class ThetisDataset:
         self.transform = transform
         self.train = train
         self.use_features = use_features
-        self.seq_length = 45 # 최근의 45개의 동작 데이터를 보고 다음 동작을 예측
+        self.seq_length = 0 # 최근의 10개의 동작 데이터를 보고 다음 동작을 예측, FPS로 설정
         self.columns = [
-            'nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear', 'left_shoulder', 'right_shoulder', 'left_elbow',
-            'right_elbow', 'left_wrist', 'right_wrist', 'left_hip', 'right_hip', 'left_knee', 'right_knee',
-            'left_ankle', 'right_ankle'
+            'nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear', 
+            'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist', 
+            'left_hip', 'right_hip', 'left_knee', 'right_knee', 'left_ankle', 'right_ankle'
         ]
         self.class_names = {'backhand2hands': '2BH', 'backhand': 'BHD', 'backhand_slice': 'BSL', 'backhand_volley': 'BVY', 
                             'forehand_flat': 'FFT', 'forehand_openstands': 'FOS', 'forehand_slice': 'FSL', 'forehand_volley': 'FVY', 
@@ -26,7 +27,7 @@ class ThetisDataset:
         self.classes = {'backhand2hands': 0, 'backhand': 1, 'backhand_slice': 2, 'backhand_volley': 3, 
                         'forehand_flat': 4, 'forehand_openstands': 5, 'forehand_slice': 6, 'forehand_volley': 7,  
                         'flat_service': 8, 'kick_service': 9, 'slice_service': 10, 'smash': 11}
-        self.keypoints_lists = []
+        self.keypoints_list = []
         self.features_len = features_len
 
     
@@ -49,27 +50,33 @@ class ThetisDataset:
 
 
     def collect_datasets(self, motion):
-        csv_file_path = 'train_video_paths.csv'
+        csv_file_path = 'csv/train_video_paths.csv'
         df = pd.read_csv(csv_file_path)
-        output_path = f"keypoints/{motion}.csv"
 
-        motion_video_paths = df[df['motion'] == motion]
- 
+        output_path = f"keypoints/{motion}.csv" # Keypoints를 저장할 CSV 파일
+
+        motion_video_paths = df[df['motion'] == motion] # 특정 Motion에 대한 Video paths 추출
+        class_idx = np.array([self.classes[motion]], dtype=np.float32) # Motion의 Label Number
+
         for idx, row in motion_video_paths.iterrows():
             video_path = row['video_path']
 
-            self.save_keypoints(video_path)
+            self.save_keypoints(video_path, class_idx) # 52 x 1 배열
 
         self.save_keypoints_to_csv(output_path) # 하나의 motion에 대한 keypoint 리스트를 csv 파일에 저장
-        self.keypoints_lists = [] # 다른 motion의 keypoint를 저장하기 위해 list 초기화
+
+        self.keypoints_list = [] # 한 Motion에 대한 좌표를 모두 저장했으면 다음 Motion을 위해 초기화
 
 
-    def save_keypoints(self, video_path):
+    def save_keypoints(self, video_path, class_idx):
         video = cv2.VideoCapture(video_path)
 
         if not video.isOpened():
             print(f"Error: Could not open video '{video_path}'")
             return
+        
+        fps, _, _, _ = get_video_properties(video)
+        self.seq_length = int(fps)
         
         while True:
             ret, frame = video.read()
@@ -77,31 +84,31 @@ class ThetisDataset:
             if not ret:
                 break
 
-            keypoints = self.calculate_keypoints(frame) # YOLO 모델 적용해서 keypoints 좌표 계산
-            self.keypoints_lists.append(keypoints) # List에 keypoint 저장
-        
-        video.release()
-        # cv2.destroyAllWindows()
+            keypoints_xyv = self.calculate_keypoints(frame) # YOLO 모델 적용해서 keypoints 좌표 계산
+
+            data = np.append(keypoints_xyv, class_idx)
+            print(data)
+            self.keypoints_list.append(data)
     
 
     def calculate_keypoints(self, image):
         results = thetis_model.predict(image)
 
         for result in results:
-            kpts = result.keypoints.xy[0].cpu().numpy() # 17 x 2 배열
-            keypoint_x_y = kpts.flatten() # [x1, y1, x2, y2, ...] -> 34 x 1 배열
+            kpts = result.keypoints.data[0].cpu().numpy() # 17 x 3 배열
+            keypoints_xyv = kpts.flatten() # [x1, y1, v1, x2, y2, v2, ...] -> 51 x 1 배열
 
-        return keypoint_x_y
+        return keypoints_xyv
     
     
     def save_keypoints_to_csv(self, output_path):
-        columns = [f'{part}_{coord}' for part in self.columns for coord in ['x', 'y']]
-        df = pd.DataFrame(self.keypoints_lists, columns=columns)
+        columns = [f'{motion}_{coord}' for motion in self.columns for coord in ['x', 'y', 'v']] + ['class']
+        df = pd.DataFrame(self.keypoints_list, columns=columns)
         df.to_csv(output_path, index=False)
 
 
 def create_train_valid_video_paths():
-    video_paths = 'video_paths.csv'
+    video_paths = 'csv/video_paths.csv'
     df = pd.read_csv(video_paths)
 
     train_video_paths_list = []
@@ -146,24 +153,24 @@ def create_train_valid_video_paths():
     valid_path_df.to_csv('csv/valid_video_paths.csv', index=False)
 
 
-def create_train_valid_test_datasets(csv_file, root_dir, transform=None):
-    """
-    Split Thetis dataset into train validation and test sets
-    """
-    videos_name = pd.read_csv(csv_file)
-    test_player_id = 40
-    test_videos_name = videos_name[
-        videos_name.loc[:, 'name'].str.contains(f'p{test_player_id}', na=False)]
-    remaining_ids = list(range(1, 55))
-    remaining_ids.remove(test_player_id)
-    valid_ids = np.random.choice(remaining_ids, 5, replace=False)
-    mask = videos_name.loc[:, 'name'].str.contains('|'.join([f'p{id}' for id in valid_ids]), na=False)
-    valid_videos_name = videos_name[mask]
-    train_videos = videos_name.drop(index=test_videos_name.index.union(valid_videos_name.index))
-    train_ds = ThetisDataset(train_videos, root_dir, transform=transform)
-    valid_ds = ThetisDataset(valid_videos_name, root_dir, transform=transform)
-    test_ds = ThetisDataset(test_videos_name, root_dir, transform=transform)
-    return train_ds, valid_ds, test_ds
+# def create_train_valid_test_datasets(csv_file, root_dir, transform=None):
+#     """
+#     Split Thetis dataset into train validation and test sets
+#     """
+#     videos_name = pd.read_csv(csv_file)
+#     test_player_id = 40
+#     test_videos_name = videos_name[
+#         videos_name.loc[:, 'name'].str.contains(f'p{test_player_id}', na=False)]
+#     remaining_ids = list(range(1, 55))
+#     remaining_ids.remove(test_player_id)
+#     valid_ids = np.random.choice(remaining_ids, 5, replace=False)
+#     mask = videos_name.loc[:, 'name'].str.contains('|'.join([f'p{id}' for id in valid_ids]), na=False)
+#     valid_videos_name = videos_name[mask]
+#     train_videos = videos_name.drop(index=test_videos_name.index.union(valid_videos_name.index))
+#     train_ds = ThetisDataset(train_videos, root_dir, transform=transform)
+#     valid_ds = ThetisDataset(valid_videos_name, root_dir, transform=transform)
+#     test_ds = ThetisDataset(test_videos_name, root_dir, transform=transform)
+#     return train_ds, valid_ds, test_ds
 
 # def get_dataloaders(csv_file, root_dir, transform, batch_size, dataset_type='stroke', num_classes=256, num_workers=0, seed=42):
 #     """
