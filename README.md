@@ -38,7 +38,8 @@
 ## Helpful Repositories
 <ul>
   <li><a href="https://github.com/avivcaspi/TennisProject">Tennis Project</a> @avivcaspi</li>
-  <li><a href="https://github.com/MaximeBataille/tennis_tracking">Tennis Tracking</a> @MaximeBataille</li>
+  <li><a href="https://github.com/MaximeBataille/tennis_tracking">Tennis_Tracking</a> @MaximeBataille</li>
+  <li><a href="https://github.com/ArtLabss/tennis-tracking">Tennis-Tracking</a> @ArtLabss</li>
   <li><a href="https://nol.cs.nctu.edu.tw:234/open-source/TrackNet/tree/master/Code_Python3">TrackNet</a></li>
   <li><a href="https://github.com/hgupt3/TRACE">TRACE</a> @hgupt3</li>
 </ul>
