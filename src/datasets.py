@@ -30,30 +30,16 @@ class ThetisDataset:
         self.keypoints_list = []
         self.features_len = features_len
 
-    
-    def save_video_paths_to_csv(self):
+
+    def collect_datasets(self, motion, dataset):
         """
-        Save the path of videos as csv file"""
-        base_path = "THETIS\VIDEO_RGB"
-
-        data = []
-        for motion in os.listdir(base_path):
-            motion_path = os.path.join(base_path, motion)
-            
-            if os.path.isdir(motion_path):
-                for video_name in os.listdir(motion_path):
-                    video_path = os.path.join(motion_path, video_name)
-                    data.append([motion, video_name, video_path])
-                        
-        df = pd.DataFrame(data, columns=["motion", "video_name", "video_path"])
-        df.to_csv("csv/video_paths.csv", index=False)
-
-
-    def collect_datasets(self, motion):
-        csv_file_path = 'csv/train_video_paths.csv'
+        Collect data for a specific motion from a CSV file containing video paths
+        and Calculate keypoints for each frame in the videos and saves them in a CSV file.
+        """
+        csv_file_path = 'csv/' + dataset + '_video_paths.csv'
         df = pd.read_csv(csv_file_path)
 
-        output_path = f"keypoints/{motion}.csv" # Keypoints를 저장할 CSV 파일
+        output_path = f"keypoints/{dataset}/{motion}.csv" # Keypoints를 저장할 CSV 파일
 
         motion_video_paths = df[df['motion'] == motion] # 특정 Motion에 대한 Video paths 추출
         class_idx = np.array([self.classes[motion]], dtype=np.float32) # Motion의 Label Number
@@ -69,6 +55,9 @@ class ThetisDataset:
 
 
     def save_keypoints(self, video_path, class_idx):
+        """
+        Process a video to calculate keypoints and appends them to a list
+        """
         video = cv2.VideoCapture(video_path)
 
         if not video.isOpened():
@@ -92,6 +81,9 @@ class ThetisDataset:
     
 
     def calculate_keypoints(self, image):
+        """
+        Calculate keypoints for a frame using a YOLO pose model
+        """
         results = thetis_model.predict(image)
 
         for result in results:
@@ -102,12 +94,37 @@ class ThetisDataset:
     
     
     def save_keypoints_to_csv(self, output_path):
+        """
+        Save the collected keypoints to a CSV file
+        """
         columns = [f'{motion}_{coord}' for motion in self.columns for coord in ['x', 'y', 'v']] + ['class']
         df = pd.DataFrame(self.keypoints_list, columns=columns)
         df.to_csv(output_path, index=False)
 
 
+def save_video_paths_to_csv():
+    """
+    Save the path of videos as CSV file
+    """
+    base_path = "THETIS\VIDEO_RGB"
+
+    data = []
+    for motion in os.listdir(base_path):
+        motion_path = os.path.join(base_path, motion)
+        
+        if os.path.isdir(motion_path):
+            for video_name in os.listdir(motion_path):
+                video_path = os.path.join(motion_path, video_name)
+                data.append([motion, video_name, video_path])
+                    
+    df = pd.DataFrame(data, columns=["motion", "video_name", "video_path"])
+    df.to_csv("csv/video_paths.csv", index=False)
+
+
 def create_train_valid_video_paths():
+    """
+    Separate video paths into train, validation, test sets
+    """
     video_paths = 'csv/video_paths.csv'
     df = pd.read_csv(video_paths)
 
@@ -153,24 +170,45 @@ def create_train_valid_video_paths():
     valid_path_df.to_csv('csv/valid_video_paths.csv', index=False)
 
 
-# def create_train_valid_test_datasets(csv_file, root_dir, transform=None):
-#     """
-#     Split Thetis dataset into train validation and test sets
-#     """
-#     videos_name = pd.read_csv(csv_file)
-#     test_player_id = 40
-#     test_videos_name = videos_name[
-#         videos_name.loc[:, 'name'].str.contains(f'p{test_player_id}', na=False)]
-#     remaining_ids = list(range(1, 55))
-#     remaining_ids.remove(test_player_id)
-#     valid_ids = np.random.choice(remaining_ids, 5, replace=False)
-#     mask = videos_name.loc[:, 'name'].str.contains('|'.join([f'p{id}' for id in valid_ids]), na=False)
-#     valid_videos_name = videos_name[mask]
-#     train_videos = videos_name.drop(index=test_videos_name.index.union(valid_videos_name.index))
-#     train_ds = ThetisDataset(train_videos, root_dir, transform=transform)
-#     valid_ds = ThetisDataset(valid_videos_name, root_dir, transform=transform)
-#     test_ds = ThetisDataset(test_videos_name, root_dir, transform=transform)
-#     return train_ds, valid_ds, test_ds
+def create_train_valid_test_datasets():
+    """
+    Split THETIS Dataset into train, validation and test sets
+    """
+    # Seed 값 설정
+    seed = 123
+    np.random.seed(seed)
+
+    # 각 Dataset의 Path
+    train_path = "keypoints/train"
+    valid_path = "keypoints/valid"
+    test_path = "keypoints/test"
+
+    # Train Set
+    train_dfs = []
+    for csv_file in os.listdir(train_path):
+        df = pd.read_csv(csv_file)
+        train_dfs.append(df)
+    
+    train_df = pd.concat(train_dfs, ignore_index=True)
+
+    # Valid Set
+    valid_dfs = []
+    for csv_file in os.listdir(valid_path):
+        df = pd.read_csv(csv_file)
+        valid_dfs.append(df)
+    
+    valid_df = pd.concat(valid_dfs, ignore_index=True)
+
+    # Test Set
+    test_dfs = []
+    for csv_file in os.listdir(test_path):
+        df = pd.read_csv(csv_file)
+        test_dfs.append(df)
+    
+    test_df = pd.concat(test_dfs, ignore_index=True)
+
+    return train_df, valid_df, test_df
+
 
 # def get_dataloaders(csv_file, root_dir, transform, batch_size, dataset_type='stroke', num_classes=256, num_workers=0, seed=42):
 #     """
