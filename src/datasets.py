@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 
 from yolo import thetis_model
-from utils import get_video_properties
 
 class ThetisDataset:
     def __init__(self, csv_file=None, root_dir=None, transform=None, train=True, use_features=True, class_names=True,
@@ -46,24 +45,23 @@ class ThetisDataset:
                     data.append([motion, video_name, video_path])
                         
         df = pd.DataFrame(data, columns=["motion", "video_name", "video_path"])
-        df.to_csv("video_paths.csv", index=False)
+        df.to_csv("csv/video_paths.csv", index=False)
 
 
     def collect_datasets(self, motion):
-        csv_file_path = 'video_paths.csv'
+        csv_file_path = 'train_video_paths.csv'
         df = pd.read_csv(csv_file_path)
         output_path = f"keypoints/{motion}.csv"
 
-        for idx, row in df.iterrows():
+        motion_video_paths = df[df['motion'] == motion]
+ 
+        for idx, row in motion_video_paths.iterrows():
             video_path = row['video_path']
 
-            if motion == row['motion']:
-                self.save_keypoints(video_path)
-    
+            self.save_keypoints(video_path)
+
         self.save_keypoints_to_csv(output_path) # 하나의 motion에 대한 keypoint 리스트를 csv 파일에 저장
         self.keypoints_lists = [] # 다른 motion의 keypoint를 저장하기 위해 list 초기화
-
-        print(f"{motion} finish\n")
 
 
     def save_keypoints(self, video_path):
@@ -91,17 +89,61 @@ class ThetisDataset:
 
         for result in results:
             kpts = result.keypoints.xy[0].cpu().numpy() # 17 x 2 배열
-            kpts = kpts.flatten() # [x1, y1, x2, y2, ...] -> 34 x 1 배열
+            keypoint_x_y = kpts.flatten() # [x1, y1, x2, y2, ...] -> 34 x 1 배열
 
-            # 테니스 동작을 하는 사람에 대해서만 keypoints 좌표를 얻을 수 있도록 수정 필요
-
-        return kpts
+        return keypoint_x_y
     
     
     def save_keypoints_to_csv(self, output_path):
         columns = [f'{part}_{coord}' for part in self.columns for coord in ['x', 'y']]
         df = pd.DataFrame(self.keypoints_lists, columns=columns)
         df.to_csv(output_path, index=False)
+
+
+def create_train_valid_video_paths():
+    video_paths = 'video_paths.csv'
+    df = pd.read_csv(video_paths)
+
+    train_video_paths_list = []
+    valid_video_paths_list = []
+    motions = ['backhand2hands', 'backhand', 'backhand_slice', 'backhand_volley', 
+               'forehand_flat', 'forehand_openstands', 'forehand_slice', 'forehand_volley', 
+               'flat_service', 'kick_service', 'slice_service', 'smash']
+    
+    for motion in motions:
+        motion_video_data = df[df['motion'] == motion]
+
+        for idx, row in motion_video_data.iterrows():
+            video_name = row['video_name']
+            video_path = row['video_path']
+
+            video = cv2.VideoCapture(video_path)
+            if not video.isOpened():
+                print(f"Error: Could not open video '{video_path}'")
+                break
+
+            pose_count = 0
+            while pose_count == 0:
+                ret, frame = video.read()
+                if not ret:
+                    break
+
+                results = thetis_model.predict(frame)
+                for result in results:
+                    kpts = result.keypoints.xy
+                    if len(kpts) >= 2:
+                        pose_count += 1
+            
+            if pose_count == 0:
+                train_video_paths_list.append([motion, video_name, video_path])
+            else:
+                valid_video_paths_list.append([motion, video_name, video_path])
+
+    train_path_df = pd.DataFrame(train_video_paths_list, columns=["motion", "video_name", "video_path"])
+    train_path_df.to_csv('csv/train_video_paths.csv', index=False)
+
+    valid_path_df = pd.DataFrame(valid_video_paths_list, columns=["motion", "video_name", "video_path"])
+    valid_path_df.to_csv('csv/valid_video_paths.csv', index=False)
 
 
 def create_train_valid_test_datasets(csv_file, root_dir, transform=None):
@@ -123,25 +165,25 @@ def create_train_valid_test_datasets(csv_file, root_dir, transform=None):
     test_ds = ThetisDataset(test_videos_name, root_dir, transform=transform)
     return train_ds, valid_ds, test_ds
 
-def get_dataloaders(csv_file, root_dir, transform, batch_size, dataset_type='stroke', num_classes=256, num_workers=0, seed=42):
-    """
-    Get train and validation dataloader for strokes and tracknet datasets
-    """
-    ds = []
-    if dataset_type == 'stroke':
-        ds = StrokesDataset(csv_file=csv_file, root_dir=root_dir, transform=transform, train=True, use_features=True)
-    elif dataset_type == 'tracknet':
-        ds = TrackNetDataset(csv_file=csv_file, train=True, num_classes=num_classes)
-    length = len(ds)
-    train_size = int(0.85 * length)
-    train_ds, valid_ds = torch.utils.data.random_split(ds, (train_size, length - train_size),
-                                                       generator=torch.Generator().manual_seed(seed))
-    print(f'train set size is : {train_size}')
-    print(f'validation set size is : {length - train_size}')
+# def get_dataloaders(csv_file, root_dir, transform, batch_size, dataset_type='stroke', num_classes=256, num_workers=0, seed=42):
+#     """
+#     Get train and validation dataloader for strokes and tracknet datasets
+#     """
+#     ds = []
+#     if dataset_type == 'stroke':
+#         ds = StrokesDataset(csv_file=csv_file, root_dir=root_dir, transform=transform, train=True, use_features=True)
+#     elif dataset_type == 'tracknet':
+#         ds = TrackNetDataset(csv_file=csv_file, train=True, num_classes=num_classes)
+#     length = len(ds)
+#     train_size = int(0.85 * length)
+#     train_ds, valid_ds = torch.utils.data.random_split(ds, (train_size, length - train_size),
+#                                                        generator=torch.Generator().manual_seed(seed))
+#     print(f'train set size is : {train_size}')
+#     print(f'validation set size is : {length - train_size}')
 
-    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    valid_dl = DataLoader(valid_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    return train_dl, valid_dl
+#     train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+#     valid_dl = DataLoader(valid_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+#     return train_dl, valid_dl
 
 if __name__ == '__main__':
     thetis = ThetisDataset()
