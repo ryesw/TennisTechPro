@@ -179,9 +179,6 @@ def create_train_valid_test_datasets():
 
     # 각 Dataset의 Path
     base_path = 'keypoints'
-    train_path = "keypoints/train"
-    valid_path = "keypoints/valid"
-    test_path = "keypoints/test"
 
     train_dfs = []
     valid_dfs = []
