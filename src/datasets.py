@@ -31,15 +31,15 @@ class ThetisDataset:
         self.features_len = features_len
 
 
-    def collect_datasets(self, motion, dataset):
+    def collect_datasets(self, motion):
         """
         Collect data for a specific motion from a CSV file containing video paths
         and Calculate keypoints for each frame in the videos and saves them in a CSV file.
         """
-        csv_file_path = 'csv/' + dataset + '_video_paths.csv'
+        csv_file_path = 'csv/extract_video_paths.csv'
         df = pd.read_csv(csv_file_path)
 
-        output_path = f"keypoints/{dataset}/{motion}.csv" # Keypoints를 저장할 CSV 파일
+        output_path = f"keypoints/{motion}.csv" # Keypoints를 저장할 CSV 파일
 
         motion_video_paths = df[df['motion'] == motion] # 특정 Motion에 대한 Video paths 추출
         class_idx = np.array([self.classes[motion]], dtype=np.float32) # Motion의 Label Number
@@ -76,7 +76,6 @@ class ThetisDataset:
             keypoints_xyv = self.calculate_keypoints(frame) # YOLO 모델 적용해서 keypoints 좌표 계산
 
             data = np.append(keypoints_xyv, class_idx)
-            print(data)
             self.keypoints_list.append(data)
     
 
@@ -118,18 +117,18 @@ def save_video_paths_to_csv():
                 data.append([motion, video_name, video_path])
                     
     df = pd.DataFrame(data, columns=["motion", "video_name", "video_path"])
-    df.to_csv("csv/video_paths.csv", index=False)
+    df.to_csv("csv/total_video_paths.csv", index=False)
 
 
-def create_train_valid_video_paths():
+def separate_video_paths():
     """
-    Separate video paths into train, validation, test sets
+    Separate video paths
     """
-    video_paths = 'csv/video_paths.csv'
+    video_paths = 'csv/total_video_paths.csv'
     df = pd.read_csv(video_paths)
 
-    train_video_paths_list = []
-    valid_video_paths_list = []
+    extract_video_paths_list = []
+    remaining_video_paths_list = []
     motions = ['backhand2hands', 'backhand', 'backhand_slice', 'backhand_volley', 
                'forehand_flat', 'forehand_openstands', 'forehand_slice', 'forehand_volley', 
                'flat_service', 'kick_service', 'slice_service', 'smash']
@@ -159,15 +158,15 @@ def create_train_valid_video_paths():
                         pose_count += 1
             
             if pose_count == 0:
-                train_video_paths_list.append([motion, video_name, video_path])
+                extract_video_paths_list.append([motion, video_name, video_path])
             else:
-                valid_video_paths_list.append([motion, video_name, video_path])
+                remaining_video_paths_list.append([motion, video_name, video_path])
 
-    train_path_df = pd.DataFrame(train_video_paths_list, columns=["motion", "video_name", "video_path"])
-    train_path_df.to_csv('csv/train_video_paths.csv', index=False)
+    train_path_df = pd.DataFrame(extract_video_paths_list, columns=["motion", "video_name", "video_path"])
+    train_path_df.to_csv('csv/extract_video_paths.csv', index=False)
 
-    valid_path_df = pd.DataFrame(valid_video_paths_list, columns=["motion", "video_name", "video_path"])
-    valid_path_df.to_csv('csv/valid_video_paths.csv', index=False)
+    valid_path_df = pd.DataFrame(remaining_video_paths_list, columns=["motion", "video_name", "video_path"])
+    valid_path_df.to_csv('csv/remaining_video_paths.csv', index=False)
 
 
 def create_train_valid_test_datasets():
@@ -179,33 +178,35 @@ def create_train_valid_test_datasets():
     np.random.seed(seed)
 
     # 각 Dataset의 Path
+    base_path = 'keypoints'
     train_path = "keypoints/train"
     valid_path = "keypoints/valid"
     test_path = "keypoints/test"
 
-    # Train Set
     train_dfs = []
-    for csv_file in os.listdir(train_path):
-        df = pd.read_csv(csv_file)
-        train_dfs.append(df)
-    
-    train_df = pd.concat(train_dfs, ignore_index=True)
-
-    # Valid Set
     valid_dfs = []
-    for csv_file in os.listdir(valid_path):
-        df = pd.read_csv(csv_file)
-        valid_dfs.append(df)
-    
-    valid_df = pd.concat(valid_dfs, ignore_index=True)
-
-    # Test Set
     test_dfs = []
-    for csv_file in os.listdir(test_path):
-        df = pd.read_csv(csv_file)
-        test_dfs.append(df)
     
-    test_df = pd.concat(test_dfs, ignore_index=True)
+    # 하나의 동작에 대한 csv 파일에서 train/valid/test로 나눔
+    for csv_file in os.listdir(base_path):
+        df = pd.read_csv(csv_file)
+
+        length = len(df)
+        a = int(length * 0.8)
+        b = int((length - a) / 2 + 1)
+    
+        train = df[:a]
+        train_dfs.append(train)
+
+        valid = df[a:b]
+        valid_dfs.append(valid)
+
+        test = df[b:]
+        test_dfs.append(test)
+
+    train_df = pd.concat(train_dfs, ignore_index=True)
+    valid_df = pd.concat(train_dfs, ignore_index=True)
+    test_df = pd.concat(train_dfs, ignore_index=True)
 
     return train_df, valid_df, test_df
 
