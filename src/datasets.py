@@ -15,7 +15,7 @@ class ThetisDataset:
         self.transform = transform
         self.train = train
         self.use_features = use_features
-        self.seq_length = 60 # 최근의 10개의 동작 데이터를 보고 다음 동작을 예측, FPS로 설정
+        self.seq_length = 0 # 최근의 n개의 동작 데이터를 보고 다음 동작을 예측, FPS로 설정
         self.columns = [
             'nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear', 
             'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist', 
@@ -209,11 +209,6 @@ def split_train_valid_test_datasets():
     """
     Split THETIS Dataset into train, validation and test sets
     """
-    # Seed 값 설정
-    seed = 123
-    np.random.seed(seed)
-
-    # 각 Dataset의 Path
     base_path = 'keypoints/'
 
     train_dfs = []
@@ -270,10 +265,6 @@ def split_train_valid_test_datasets():
 
 if __name__ == '__main__':
     thetis = ThetisDataset()
-
-    motions = thetis.class_names
-    for motion in motions.keys():
-        thetis.collect_datasets(motion)
 
     x_train, y_train, x_valid, y_valid, x_test, y_test = thetis.create_sequence_dataset()
 
