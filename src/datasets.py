@@ -15,7 +15,7 @@ class ThetisDataset:
         self.transform = transform
         self.train = train
         self.use_features = use_features
-        self.seq_length = 0 # 최근의 10개의 동작 데이터를 보고 다음 동작을 예측, FPS로 설정
+        self.seq_length = 60 # 최근의 10개의 동작 데이터를 보고 다음 동작을 예측, FPS로 설정
         self.columns = [
             'nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear', 
             'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist', 
@@ -100,6 +100,30 @@ class ThetisDataset:
         df = pd.DataFrame(self.keypoints_list, columns=columns)
         df.to_csv(output_path, index=False)
 
+    
+    def create_sequence_dataset(self):
+
+        x_train, y_train, x_valid, y_valid, x_test, y_test = split_train_valid_test_datasets()
+        
+        x_train_sequence, y_train_sequence = self.convert_sequence_dataset(x_train, y_train)
+        x_valid_sequence, y_valid_sequence = self.convert_sequence_dataset(x_valid, y_valid)
+        x_test_sequence, y_test_sequence = self.convert_sequence_dataset(x_test, y_test)
+
+        return x_train_sequence, y_train_sequence, x_valid_sequence, y_valid_sequence, x_test_sequence, y_test_sequence
+    
+    
+    def convert_sequence_dataset(self, x_data, y_data):
+        x_dataset = []
+        y_dataset = []
+
+        for i in range(len(x_data) - self.seq_length):
+            _x = x_data[i:i + self.seq_length]
+            x_dataset.append(_x)
+            _y = y_data[i] 
+            y_dataset.append(_y)
+
+        return np.array(x_dataset), np.array(y_dataset)
+    
 
 def save_video_paths_to_csv():
     """
@@ -169,7 +193,19 @@ def separate_video_paths():
     valid_path_df.to_csv('csv/remaining_video_paths.csv', index=False)
 
 
-def create_train_valid_test_datasets():
+def split_datasets(df):
+    length = len(df)
+    a = int(length * 0.8)
+    b = int((length - a) / 2 + 1)
+
+    train = df[:a]
+    valid = df[a:a+b]
+    test = df[a+b:]
+
+    return train, valid, test
+
+
+def split_train_valid_test_datasets():
     """
     Split THETIS Dataset into train, validation and test sets
     """
@@ -178,7 +214,7 @@ def create_train_valid_test_datasets():
     np.random.seed(seed)
 
     # 각 Dataset의 Path
-    base_path = 'keypoints'
+    base_path = 'keypoints/'
 
     train_dfs = []
     valid_dfs = []
@@ -186,26 +222,29 @@ def create_train_valid_test_datasets():
     
     # 하나의 동작에 대한 csv 파일에서 train/valid/test로 나눔
     for csv_file in os.listdir(base_path):
-        df = pd.read_csv(csv_file)
+        df = pd.read_csv(base_path + csv_file)
 
-        length = len(df)
-        a = int(length * 0.8)
-        b = int((length - a) / 2 + 1)
-    
-        train = df[:a]
+        train, valid, test = split_datasets(df)
+
         train_dfs.append(train)
-
-        valid = df[a:b]
         valid_dfs.append(valid)
-
-        test = df[b:]
         test_dfs.append(test)
 
     train_df = pd.concat(train_dfs, ignore_index=True)
-    valid_df = pd.concat(train_dfs, ignore_index=True)
-    test_df = pd.concat(train_dfs, ignore_index=True)
+    valid_df = pd.concat(valid_dfs, ignore_index=True)
+    test_df = pd.concat(test_dfs, ignore_index=True)
 
-    return train_df, valid_df, test_df
+    x_train = train_df.drop('class', axis=1).values
+    y_train = train_df['class'].reset_index(drop=True).values
+
+    x_valid = valid_df.drop('class', axis=1).values
+    y_valid = valid_df['class'].reset_index(drop=True).values
+
+    x_test = test_df.drop('class', axis=1).values
+    y_test = test_df['class'].reset_index(drop=True).values
+
+    return x_train, y_train, x_valid, y_valid, x_test, y_test
+
 
 
 # def get_dataloaders(csv_file, root_dir, transform, batch_size, dataset_type='stroke', num_classes=256, num_workers=0, seed=42):
@@ -228,9 +267,21 @@ def create_train_valid_test_datasets():
 #     valid_dl = DataLoader(valid_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 #     return train_dl, valid_dl
 
+
 if __name__ == '__main__':
     thetis = ThetisDataset()
 
     motions = thetis.class_names
     for motion in motions.keys():
         thetis.collect_datasets(motion)
+
+    x_train, y_train, x_valid, y_valid, x_test, y_test = thetis.create_sequence_dataset()
+
+    print(x_train.shape)
+    print(y_train.shape)
+
+    print(x_valid.shape)
+    print(y_valid.shape)
+
+    print(x_test.shape)
+    print(y_test.shape)
