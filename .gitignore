@@ -25,3 +25,6 @@ src/__pycache__
 
 # Code Check 용도 파일
 src/check.py
+
+# EDA 결과 이미지
+eda_result/
