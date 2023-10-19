@@ -6,6 +6,7 @@ origin/
 
 # THETIS
 THETIS/
+keypoints/
 
 # test의 이미지 파일
 test/*.jpg
@@ -22,9 +23,6 @@ runs/
 
 # cache 폴더
 src/__pycache__
-
-# Code Check 용도 파일
-src/check.py
 
 # EDA 결과 이미지
 eda_result/
