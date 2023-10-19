@@ -81,8 +81,7 @@ def make_yolo_dataset(json_dir, txt_dir, img_size):
             with open(txt_dir + img_name + '.txt', 'w') as f:
                 for bbox in bbox_list:
                     data = ' '.join(map(str, bbox))
-                    f.write(bbox + '\n')
-                    # f.write(str(bbox[0]) + ' ' + str(bbox[1]) + ' ' + str(bbox[2]) + ' ' + str(bbox[3]) + ' ' + str(bbox[4]) + '\n')
+                    f.write(data + '\n')
 
 
 def remove_txt_files(txt_dir):
