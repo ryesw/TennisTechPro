@@ -4,7 +4,7 @@ datasets/
 # AI Hub 원본 dataset
 origin/
 
-# THETIS
+# THETIS Dataset
 THETIS/
 keypoints/
 
@@ -26,3 +26,6 @@ src/__pycache__
 
 # EDA 결과 이미지
 eda_result/
+
+# Motion Recogntion 모델
+models/

@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
-from ultralytics import YOLO
+
 from yolo import thetis_model
 
 def save_video_paths_to_csv():
