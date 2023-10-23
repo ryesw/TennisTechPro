@@ -331,6 +331,23 @@ class CourtDetector:
 
         return lines
     
+
+    def get_extra_parts_location(self, frame_num=-1):
+        parts = np.array(self.court_reference.get_extra_parts(), dtype=np.float32).reshape((-1, 1, 2))
+        parts = cv2.perspectiveTransform(parts, self.court_warp_matrix[frame_num]).reshape(-1)
+        top_part = parts[:2]
+        bottom_part = parts[2:]
+        return top_part, bottom_part
+
+
+    def delete_extra_parts(self, frame, frame_num=-1):
+        img = frame.copy()
+        top, bottom = self.get_extra_parts_location(frame_num)
+        img[int(bottom[1] - 10):int(bottom[1] + 10), int(bottom[0] - 15):int(bottom[0] + 15), :] = (0, 0, 0)
+        img[int(top[1] - 10):int(top[1] + 10), int(top[0] - 15):int(top[0] + 15), :] = (0, 0, 0)
+        return img
+    
+
     def get_warped_court(self):
         """
         Returns warped court using the reference court and the transformation of the court
@@ -438,11 +455,6 @@ class CourtDetector:
                     # if cv2.waitKey(0) & 0xff == 27:
                     #     cv2.destroyAllWindows()
                     return self.detect(frame)
-                    conf_points = np.array(self.court_reference.court_conf[self.best_conf], dtype=np.float32).reshape((-1, 1, 2))
-                    self.frame_points = cv2.perspectiveTransform(conf_points, self.court_warp_matrix[-1]).squeeze().round()
-
-                    print('Smaller than 50')
-                    return
                 else:
                     print('Court tracking failed, adding 5 pixels to dist')
                     self.dist += 5
@@ -525,3 +537,12 @@ def display_lines_on_frame(frame, horizontal=(), vertical=()):
         cv2.destroyAllWindows()
 
     return frame
+
+if __name__ == '__main__':
+    img = cv2.imread('test/2.png')
+    c = CourtDetector()
+    c.detect(img)
+    img = c.delete_extra_parts(img)
+    cv2.imshow('img', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()

@@ -57,7 +57,6 @@ class CourtReference:
         """
         court = np.zeros((self.court_height + 2 * self.top_bottom_border, self.court_width + 2 * self.right_left_border), dtype=np.uint8)
         
-        # cv2.line(img, pt1, pt2, color, 선 두께) -> pt1과 pt2를 *으로 받음, color=1은 white를 의미함, 선 두께는 class 내부 변수로 1임
         cv2.line(court, *self.baseline_top, 1, self.line_width)
         cv2.line(court, *self.baseline_bottom, 1, self.line_width)
         cv2.line(court, *self.net, 1, self.line_width)
@@ -117,6 +116,6 @@ class CourtReference:
         return mask
 
 
-# if __name__ == '__main__':
-#     c = CourtReference()
-#     c.build_court_reference()
+if __name__ == '__main__':
+    c = CourtReference()
+    c.build_court_reference()
