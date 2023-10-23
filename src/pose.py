@@ -20,8 +20,8 @@ class PoseExtractor:
         self.data = []
         self.line_width = 2
         self.margin = 45
-        self.__player_1_count = 0
-        self.__player_2_count = 0
+        self.player_1_count = 0
+        self.player_2_count = 0
         self.line_connection = [(7, 9), (7, 5), (10, 8), (8, 6), (6, 5), (15, 13),
                                 (13, 11), (11, 12), (12, 14), (14, 16), (5, 11), (12, 6)] # Court Line
         self.COCO_PERSON_KEYPOINT_NAMES = [
@@ -50,8 +50,8 @@ class PoseExtractor:
         Extract the pose of player 1(bottom) from the given image
         """
         height, width = image.shape[:2]
-        
-        if len(p1_boxes) > 0:
+
+        if p1_boxes[-1] is not None:
             x1, y1, x2, y2 = p1_boxes[-1]
             xt, yt, xb, yb = int(x1), int(y1), int(x2), int(y2)
             patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
@@ -59,7 +59,7 @@ class PoseExtractor:
             p1_patch = self._annotate_pose_on_patch(patch)
             image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p1_patch
 
-            self.__player_1_count += 1
+            self.player_1_count += 1
 
         return image
 
@@ -70,7 +70,7 @@ class PoseExtractor:
         """
         height, width = image.shape[:2]
 
-        if len(p2_boxes) > 0:
+        if p2_boxes[-1] is not None:
             x1, y1, x2, y2 = p2_boxes[-1]
             xt, yt, xb, yb = int(x1), int(y1), int(x2), int(y2)
             patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
@@ -78,7 +78,7 @@ class PoseExtractor:
             p2_patch = self._annotate_pose_on_patch(patch)
             image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p2_patch
 
-            self.__player_2_count += 1
+            self.player_2_count += 1
 
         return image
 
@@ -101,8 +101,8 @@ class PoseExtractor:
     
     
     def print_counts(self):
-        print('Player 1 Pose Estimation Count: ', self.__player_1_count)
-        print('Player 2 Pose Estimation Count: ', self.__player_2_count)
+        print('Player 1 Pose Estimation Count: ', self.player_1_count)
+        print('Player 2 Pose Estimation Count: ', self.player_2_count)
 
 
     def save_to_csv(self, output_folder):
