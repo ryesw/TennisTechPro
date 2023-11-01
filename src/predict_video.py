@@ -26,6 +26,20 @@ minimap = args.minimap
 bounce = args.bounce
 
 
+def merge(frame, image):
+    frame_h, frame_w = frame.shape[:2]
+
+    width = frame_w // 4
+    resized = imutils.resize(image, width=width)
+
+    img_h, img_w = resized.shape[:2]
+    w = frame_w - img_w
+
+    frame[:img_h, w:] = resized
+
+    return frame
+
+
 def create_minimap(court_detector, player_detector, ball_detector, fps):
     """
     Creates top view video of the gameplay
@@ -44,27 +58,13 @@ def create_minimap(court_detector, player_detector, ball_detector, fps):
     for feet_pos_1, feet_pos_2 in zip(smoothed_1, smoothed_2):
         frame = court.copy()
         if feet_pos_1[0] is not None:
-            frame = cv2.circle(frame, (int(feet_pos_1[0]), int(feet_pos_1[1])), 10, (255, 0, 0), 15)
+            frame = cv2.circle(frame, (int(feet_pos_1[0]), int(feet_pos_1[1])), 15, (255, 0, 0), -1)
         if feet_pos_2[0] is not None:
-            frame = cv2.circle(frame, (int(feet_pos_2[0]), int(feet_pos_2[1])), 10, (255, 0, 0), 15)
+            frame = cv2.circle(frame, (int(feet_pos_2[0]), int(feet_pos_2[1])), 15, (255, 0, 0), -1)
         frame = ball_detector.draw_ball_position_in_minimap(frame, court_detector, frame_num)
         frame_num += 1
         out.write(frame)
     out.release()
-
-
-def merge(frame, image):
-    frame_h, frame_w = frame.shape[:2]
-
-    width = frame_w // 7
-    resized = imutils.resize(image, width=width)
-
-    img_h, img_w = resized.shape[:2]
-    w = frame_w - img_w
-
-    frame[:img_h, w:] = resized
-
-    return frame
 
 
 def add_minimap(output_video_path):
@@ -129,10 +129,11 @@ def process(input_video_path, output_video_path):
                 lines = court_detector.track_court(frame)
 
             # Detect ball
-            frame = ball_detector.detect_ball(frame, v_width, v_height)
+            frame = ball_detector.detect_ball_in_one_frame(frame, v_width, v_height)
             
             # Detect two players
-            frame = player_detector.detect(frame) # frame vs frame.copy()
+            frame = player_detector.detect_bottom_player(frame, court_detector) # frame vs frame.copy()
+            frame = player_detector.detect_top_player(frame, court_detector) # frame vs frame.copy()
 
             # Estimate player's pose
             player1_boxes, player2_boxes = player_detector.get_boxes()
@@ -152,8 +153,11 @@ def process(input_video_path, output_video_path):
     # First Part에서 진행했던 Pose Estimation을 Action Recognition과 묶어서 진행
 
     # Third Part: Processing ball coordinates
+    print('전처리 전 \n', ball_detector.xy_coordinates)
     ball_detector.remove_outliers()
     ball_detector.interpolate_coords()
+    # ball_detector.preprocessing_ball_coords()
+    print('전처리 후 \n', ball_detector.xy_coordinates)
 
     # Fourth Part: Add minimap in video
     create_minimap(court_detector, player_detector, ball_detector, fps) # minimap video를 생성
@@ -170,6 +174,6 @@ def process(input_video_path, output_video_path):
     pose_extractor.print_counts()
 
 if __name__ == '__main__':
-    input_video_path = 'test/video_input1.mp4'
-    output_video_path = 'output/test_output.mp4'
+    input_video_path = 'test/video_input2.mp4'
+    output_video_path = 'output/output.mp4'
     process(input_video_path, output_video_path)

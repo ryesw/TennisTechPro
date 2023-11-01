@@ -19,7 +19,7 @@ class PoseExtractor:
         self.keypoint_threshold = 2
         self.data = []
         self.line_width = 2
-        self.margin = 45
+        self.margin = 40
         self.player_1_count = 0
         self.player_2_count = 0
         self.line_connection = [(7, 9), (7, 5), (10, 8), (8, 6), (6, 5), (15, 13),

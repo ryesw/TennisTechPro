@@ -12,6 +12,10 @@ keypoints/
 test/*.jpg
 test/*.png
 
+# output 파일
+output/video4/
+output/video6/
+
 # 참고 ipynb 파일
 ref/
 
