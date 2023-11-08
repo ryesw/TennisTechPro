@@ -17,9 +17,10 @@ class PoseExtractor:
         self.PERSON_LABEL = None
         self.SCORE_MIN = 0.90
         self.keypoint_threshold = 2
-        self.data = []
+        self.p1_keypoints = []
+        self.p2_keypoints = []
         self.line_width = 2
-        self.margin = 40
+        self.margin = 10
         self.player_1_count = 0
         self.player_2_count = 0
         self.line_connection = [(7, 9), (7, 5), (10, 8), (8, 6), (6, 5), (15, 13),
@@ -51,15 +52,18 @@ class PoseExtractor:
         """
         height, width = image.shape[:2]
 
-        if p1_boxes[-1] is not None:
-            x1, y1, x2, y2 = p1_boxes[-1]
+        if p1_boxes is not None:
+            x1, y1, x2, y2 = p1_boxes # p1_boxes[-1]
             xt, yt, xb, yb = int(x1), int(y1), int(x2), int(y2)
             patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
 
-            p1_patch = self._annotate_pose_on_patch(patch)
+            p1_patch, kpts = self._annotate_pose_on_patch(patch)
             image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p1_patch
+            self.p1_keypoints.append(kpts)
 
             self.player_1_count += 1
+        else:
+            self.p1_keypoints.append(np.zeros(34))
 
         return image
 
@@ -70,34 +74,32 @@ class PoseExtractor:
         """
         height, width = image.shape[:2]
 
-        if p2_boxes[-1] is not None:
-            x1, y1, x2, y2 = p2_boxes[-1]
+        if p2_boxes is not None:
+            x1, y1, x2, y2 = p2_boxes # p2_boxes[-1]
             xt, yt, xb, yb = int(x1), int(y1), int(x2), int(y2)
             patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
             
-            p2_patch = self._annotate_pose_on_patch(patch)
+            p2_patch, kpts = self._annotate_pose_on_patch(patch)
             image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p2_patch
+            self.p2_keypoints.append(kpts)
 
             self.player_2_count += 1
+        else:
+            self.p2_keypoints.append(np.zeros(34))
 
         return image
-
+    
 
     def _annotate_pose_on_patch(self, patch):
         """
         Annotate the pose on a patch of the image
         """
         results = self.pose_model.predict(patch, boxes=False)
-        for result in results:
-            annotator = Annotator(patch, line_width=self.line_width, pil=True)
-            kpts = result.keypoints
+        kpts = results[0].keypoints.xyn[0].cpu().numpy().flatten()
 
-            for kpt in kpts:
-                pt = kpt.data[0].cpu().numpy()
-                annotator.kpts(pt)
+        player_patch = results[0].plot(kpt_radius=3, line_width=self.line_width, boxes=False)
 
-        player_patch = annotator.result()
-        return player_patch
+        return player_patch, kpts
     
     
     def print_counts(self):
@@ -105,16 +107,14 @@ class PoseExtractor:
         print('Player 2 Pose Estimation Count: ', self.player_2_count)
 
 
-    def save_to_csv(self, output_folder):
-        """
-        Saves the pose keypoints data as csv file
-        :param output_folder: str, path to output folder
-        :return: df, the data frame of the pose keypoints
-        """
-        columns = self.COCO_PERSON_KEYPOINT_NAMES
-        columns_x = [column + '_x' for column in columns]
-        columns_y = [column + '_y' for column in columns]
-        df = pd.DataFrame(self.data, columns=columns_x + columns_y) # + self.player
-        outfile_path = os.path.join(output_folder, 'stickman_data.csv')
-        df.to_csv(outfile_path, index=False)
+    def save_to_csv(self):
+        columns = [f'{keypoint}_{coord}' for keypoint in self.COCO_PERSON_KEYPOINT_NAMES for coord in ['x', 'y']]
+
+        # player1의 keypoint 좌표를 모두 저장
+        df = pd.DataFrame(self.p1_keypoints, columns=columns)
+        df.to_csv('output/keypoints/p1_keypoints.csv', index=False)
+
+        # player2의 keypoint 좌표를 모두 저장
+        df = pd.DataFrame(self.p2_keypoints, columns=columns) # + self.player
+        df.to_csv('output/keypoints/p2_keypoints.csv', index=False)
         return df
