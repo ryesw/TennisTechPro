@@ -61,14 +61,14 @@ def create_minimap(court_detector, player_detector, ball_detector, fps):
             frame = cv2.circle(frame, (int(feet_pos_1[0]), int(feet_pos_1[1])), 15, (255, 0, 0), -1)
         if feet_pos_2[0] is not None:
             frame = cv2.circle(frame, (int(feet_pos_2[0]), int(feet_pos_2[1])), 15, (255, 0, 0), -1)
-        frame = ball_detector.draw_ball_position_in_minimap(frame, court_detector, frame_num)
+        # frame = ball_detector.draw_ball_position_in_minimap(frame, court_detector, frame_num)
         frame_num += 1
         out.write(frame)
     out.release()
 
 
 def add_minimap(output_video_path):
-    video = cv2.VideoCapture('output/detection.mp4')
+    video = cv2.VideoCapture('output/analysis.mp4')
     fps, length, v_width, v_height = get_video_properties(video)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
@@ -102,24 +102,25 @@ def process(input_video_path, output_video_path):
 
     # Output Video
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    detection_video = cv2.VideoWriter('output/detection.mp4', fourcc, fps, (v_width, v_height))
+    analysis_video = cv2.VideoWriter('output/analysis.mp4', fourcc, fps, (v_width, v_height))
 
     # Initialize
     court_detector = CourtDetector() # Court Detector
-    player_detector = DetectionModel() # Players tracker
+    player_detector = DetectionModel() # Player detector
     pose_extractor = PoseExtractor() # Pose Extractor
     # action_recognition = ActionRecognition() # Action Recognition
     ball_detector = BallDetector() # tracknet
 
-    frame_i = 0 # frame counter
+    frame_num = 0 # frame counter
     frames = [] # Save all frame
 
     # First Part: Court Line Detection, Object Detection, Pose Estimation, Ball Detection
     while True:
         ret, frame = video.read()
-        frame_i += 1
+        frame_num += 1
+
         if ret:
-            if frame_i == 1:
+            if frame_num == 1:
                 print('Start!')
                 print('Detecting the court and the players...')
                 print("Estimate player's pose...")
@@ -143,14 +144,14 @@ def process(input_video_path, output_video_path):
             new_frame = court_detector.draw_court_lines(frame, lines)
             frames.append(new_frame)
                 
-            detection_video.write(new_frame)
+            analysis_video.write(new_frame)
         else:
             break
     video.release() # Video 획득 개체를 해제
-    detection_video.release()
+    analysis_video.release()
 
     # Second Part: Pose Estimation, Action Recognition
-    # First Part에서 진행했던 Pose Estimation을 Action Recognition과 묶어서 진행
+
 
     # Third Part: Processing ball coordinates
     print('전처리 전 \n', ball_detector.xy_coordinates)
@@ -169,11 +170,11 @@ def process(input_video_path, output_video_path):
 
     print('Finished!')
     print(f'Analysis Time: {round(total_time)}s')
-    print('Total Frame: ', frame_i)
+    print('Total Frame: ', frame_num)
     player_detector.print_counts()
     pose_extractor.print_counts()
 
 if __name__ == '__main__':
-    input_video_path = 'test/video_input2.mp4'
+    input_video_path = 'test/video_input6.mp4'
     output_video_path = 'output/output.mp4'
     process(input_video_path, output_video_path)

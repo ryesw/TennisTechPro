@@ -33,7 +33,7 @@ def combine_three_frames(current_frame, before_last_frame, last_frame, width, he
     return imgs
 
 
-class BallDetector():
+class BallDetector:
     def __init__(self):
         self.tracknet = TrackNet()
         self.tracknet.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
@@ -171,7 +171,7 @@ class BallDetector():
             p = np.array(coord, dtype='float64')
             ball_pos = np.array([p[0], p[1]]).reshape((1, 1, 2))
             transformed = cv2.perspectiveTransform(ball_pos, inv_mats)[0][0].astype('int64')
-            img = cv2.circle(img, (transformed[0], transformed[1]), 13, (0, 255, 255), -1)
+            img = cv2.circle(img, (transformed[0], transformed[1]), 20, (0, 255, 255), -1)
 
         return img
     

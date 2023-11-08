@@ -282,7 +282,7 @@ class CourtDetector:
     
 
     def find_lines_location(self):
-        # 테니스 코트에서 중요한 직선들의 위치를 찾음
+        # 테니스 코트에서 주요 직선들의 위치를 찾음
 
         p = np.array(self.court_reference.get_important_lines(), dtype=np.float32).reshape((-1, 1, 2))
         lines = cv2.perspectiveTransform(p, self.court_warp_matrix[-1]).reshape(-1)
