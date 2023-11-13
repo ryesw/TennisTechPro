@@ -111,10 +111,11 @@ class PoseExtractor:
         columns = [f'{keypoint}_{coord}' for keypoint in self.COCO_PERSON_KEYPOINT_NAMES for coord in ['x', 'y']]
 
         # player1의 keypoint 좌표를 모두 저장
-        df = pd.DataFrame(self.p1_keypoints, columns=columns)
-        df.to_csv('output/keypoints/p1_keypoints.csv', index=False)
+        p1_df = pd.DataFrame(self.p1_keypoints, columns=columns)
+        p1_df.to_csv('output/keypoints/p1_keypoints.csv', index=False)
 
         # player2의 keypoint 좌표를 모두 저장
-        df = pd.DataFrame(self.p2_keypoints, columns=columns) # + self.player
-        df.to_csv('output/keypoints/p2_keypoints.csv', index=False)
-        return df
+        p2_df = pd.DataFrame(self.p2_keypoints, columns=columns)
+        p2_df.to_csv('output/keypoints/p2_keypoints.csv', index=False)
+
+        return p1_df, p2_df
