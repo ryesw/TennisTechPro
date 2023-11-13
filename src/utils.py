@@ -188,14 +188,9 @@ def get_stickman_line_connection():
     return line_connection
 
 
-# img_size = (1920, 1080)
-# match_type = ['cp_ms/', 'cp_ws/'] # 남자 단식, 여자 단식
-# train_txt_dir = './datasets/train/labels/'
-# valid_txt_dir = './datasets/valid/labels/'
-
-# for i in range(2):
-#     train_json_dir = './origin/train/labels/' + match_type[i]
-#     valid_json_dir = './origin/valid/labels/' + match_type[i]
-
-#     make_yolo_dataset(train_json_dir, train_txt_dir, img_size)
-#     make_yolo_dataset(valid_json_dir, valid_txt_dir, img_size)
+def center_of_box(box):
+    if box[0] is None:
+        return None, None
+    height = box[3] - box[1]
+    width = box[2] - box[0]
+    return box[0] + width / 2, box[1] + height / 2
