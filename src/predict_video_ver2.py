@@ -2,7 +2,7 @@ import cv2
 import imutils
 import time
 
-from court_detection import CourtDetector
+from court_detection_csy import CourtDetector
 from object_tracking import Tracker
 from pose import PoseExtractor
 from action_recognition import ActionRecognition
@@ -91,7 +91,7 @@ def process(input_video_path, output_video_path):
     court_detector = CourtDetector() # Court Detector
     tracker = Tracker() # Player tracker
     pose_extractor = PoseExtractor() # Pose Extractor
-    # action_recognition = ActionRecognition() # Action Recognition
+    action_recognition = ActionRecognition() # Action Recognition
     ball_detector = BallDetector() # tracknet
 
     frame_num = 0 # frame counter
@@ -106,7 +106,7 @@ def process(input_video_path, output_video_path):
             print('Detecting and Tracking the ball and players... ')
         if ret:
             # Tracking two players
-            tracker.detect(frame, frame_num)
+            tracker.track(frame, frame_num)
 
             # Detect ball
             ball_detector.detect_ball(frame)
@@ -151,16 +151,17 @@ def process(input_video_path, output_video_path):
     video.release() # Video 획득 개체를 해제
     analysis_video.release() # Video 획득 개체를 해제
 
-
-    # Third Part: Action Recognition
-    pose_extractor.save_to_csv() # 선수들의 pose를 추정한 좌표를 저장
-
-
-
-    # Fourth Part: Processing ball coordinates
+    # Third Part: Processing ball coordinates
     print('전처리 전 \n', ball_detector.xy_coordinates)
     ball_detector.preprocessing_ball_coords()
     print('전처리 후 \n', ball_detector.xy_coordinates)
+
+    # Fourth Part: Action Recognition
+    p1_df, p2_df = pose_extractor.save_to_csv() # 선수들의 pose를 추정한 좌표를 저장
+    action_recognition.predict(tracker.player1_boxes, tracker.player2_boxes,
+                               p1_df, p2_df, ball_detector.xy_coordinates)
+
+
 
     # Fifth Part: Add minimap in video
     create_minimap(court_detector, tracker, ball_detector, fps) # minimap video를 생성
@@ -178,6 +179,6 @@ def process(input_video_path, output_video_path):
 
 
 if __name__ == '__main__':
-    input_video_path = 'test/video_input5.mp4'
+    input_video_path = 'test/video_input4.mp4'
     output_video_path = 'output/output.mp4'
     process(input_video_path, output_video_path)
