@@ -1,8 +1,5 @@
-# YOLO Custom Dataset
-datasets/
-
-# AI Hub 원본 dataset
-origin/
+# Motion Dataset
+dataset/
 
 # THETIS Dataset
 THETIS/
@@ -31,5 +28,5 @@ src/__pycache__
 # EDA 결과 이미지
 eda_result/
 
-# Motion Recogntion 모델
+# Model Weight 폴더
 models/

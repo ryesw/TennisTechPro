@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw
 from scipy import signal
 from scipy.interpolate import interp1d
 
@@ -26,9 +25,6 @@ class ConvBlock(nn.Module):
         return self.block(x)
     
 class BallTrackNet(nn.Module):
-    """
-    Deep network for ball detection
-    """
     def __init__(self, out_channels=256, bn=True):
         super().__init__()
         self.out_channels = out_channels

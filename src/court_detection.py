@@ -1,26 +1,26 @@
 from sympy import Line
-from itertools import combinations
+from itertools import combinations, product
 from court_reference import CourtReference
 import matplotlib.pyplot as plt
 
 import numpy as np
 import cv2
 
-# Frame에서 테니스 코트를 추출하고 tracking 하는 클래스
 class CourtDetector:
+    # Frame에서 테니스 코트를 추출하고 tracking 하는 클래스
     def __init__(self, verbose=0):
         self.verbose = verbose # 출력문 flag -> 0이면 x
         self.threshold = 200 # grayscale 임계값 (네트까지 감지)
-        self.dist_tau = 3
-        self.intensity_threshold = 40
+        self.dist_tau = 3 # filtering할 때 제거할 가장자리의 픽셀 범위
+        self.intensity_threshold = 40 # 주변 픽셀과의 밝기값 차이
         self.court_reference = CourtReference() # Reference Court
         self.v_width = 0 # Frame의 가로
         self.v_height = 0 # Frame의 세로
         self.frame = None # 영상의 한 프레임을 읽어서 저장
         self.gray = None # grayscale로 변환한 이미지 저장
-        self.court_warp_matrix = []
-        self.game_warp_matrix = []
-        self.court_score = 0
+        self.court_warp_matrix = [] # transformation matrix
+        self.game_warp_matrix = [] # transformation inverse matrix
+        self.court_score = 0 # transformation matrix score
         self.baseline_top = None
         self.baseline_bottom = None
         self.net = None
@@ -39,20 +39,28 @@ class CourtDetector:
         self.dist = 5
 
     def detect(self, frame):
-        # 이미지(영상)에서 테니스 코트를 추출하는 함수
+        # 프레임(영상)에서 테니스 코트를 추출하는 함수
 
+        # 각 변수 초기화
         self.frame = frame
         self.v_height, self.v_width = frame.shape[:2]
 
         # 이미지를 grayscale로 변환 후
         # threshold 값에 따라 이미지에서 흰 부분을 추출
         self.gray = self.binary(frame)
+        #cv2.imshow('self.gray', self.gray)
+        #if cv2.waitKey(0) & 0xff == 27:
+        #    cv2.destroyAllWindows()
 
         # grayscale 이미지 Filtering
         filter_img = self.filter(self.gray)
+        #cv2.imshow('filter_img', filter_img)
+        #if cv2.waitKey(0) & 0xff == 27:
+        #    cv2.destroyAllWindows()
 
         # Filtering한 이미지에서
         # 수평선, 수직선을 추출 -> Hough transform 사용
+        # 현재는 공식적인 테니스 경기 영상과 같은 코트에서만 가능
         horizontal, vertical = self._detect_lines(filter_img)
 
         # 이미지에서 추출한 테니스 코트와
@@ -66,35 +74,44 @@ class CourtDetector:
         #   self.success_flag = True
         # print('Court accuracy = %.2f' % court_accuracy)
 
-        # Find important lines location on frame
+        # 프레임에서 테니스 코트의 중요한 선들의 위치를 저장
         lines = self.find_lines_location()
 
         return lines
   
 
     def binary(self, frame):
-        # BGR 이미지에 grayscale 적용
+        # RGB 이미지에 grayscale 적용
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        # 임계값보다 높은 픽셀 추출
+        # 임계값보다 높은 픽셀은 255 값
+        # 아닌 것은 0의 값으로 변환
         gray = cv2.threshold(gray, self.threshold, 255, cv2.THRESH_BINARY)[1]
         
         return gray
   
 
     def filter(self, gray):
-        # 인근 픽셀을 사용해서 이미지를 필터링함
+        # 주변 픽셀과 비교해서 이미지를 필터링함
+        d_tau = self.dist_tau
+        i_threshold = self.intensity_threshold
+        h, w = gray.shape
 
-        for i in range(self.dist_tau, len(gray) - self.dist_tau):
-            for j in range(self.dist_tau, len(gray[0]) - self.dist_tau):
+        # 이미지의 가장자리에서 self.dist_tau 픽셀 만큼의 테두리를 제외
+        for i in range(d_tau, h - d_tau):
+            for j in range(d_tau, w - d_tau):
                 if gray[i, j] == 0:
                     continue
-                if (gray[i, j] - gray[i + self.dist_tau, j] > self.intensity_threshold and
-                        gray[i, j] - gray[i - self.dist_tau, j] > self.intensity_threshold):
+                
+                # 주변 픽셀과 self.intensity_threshold만큼 값이 차이가 나는지 확인(가로)
+                if (gray[i, j] - gray[i + d_tau, j] > i_threshold and
+                        gray[i, j] - gray[i - d_tau, j] > i_threshold):
                     continue
-                if (gray[i, j] - gray[i, j + self.dist_tau] > self.intensity_threshold and
-                        gray[i, j] - gray[i, j - self.dist_tau] > self.intensity_threshold):
+                # 세로로 확인
+                if (gray[i, j] - gray[i, j + d_tau] > i_threshold and
+                        gray[i, j] - gray[i, j - d_tau] > i_threshold):
                     continue
+
                 gray[i, j] = 0
         
         return gray
@@ -103,8 +120,8 @@ class CourtDetector:
     def _detect_lines(self, gray):
         # Hough transform을 사용해서 직선을 추출
 
-        minLineLength = 100
-        maxLineGap = 20
+        minLineLength = 100 # 선으로 간주할 최소 길이
+        maxLineGap = 20 # 동일한 선으로 간주할 최대 간격
 
         lines = cv2.HoughLinesP(gray, 1, np.pi / 180, 80, minLineLength=minLineLength, maxLineGap=maxLineGap)
         lines = np.squeeze(lines)
@@ -162,7 +179,7 @@ class CourtDetector:
 
     def _merge_lines(self, horizontal_lines, vertical_lines):
         # 같은 선상에 있는 직선들을 합병하기
-
+        
         # Merge horizontal lines
         horizontal_lines = sorted(horizontal_lines, key=lambda item: item[0])
         mask = [True] * len(horizontal_lines)
@@ -214,26 +231,25 @@ class CourtDetector:
         max_score = -np.inf
         max_mat = None
         max_inv_mat = None
-        k = 0
-
+        
         # Loop over every pair of horizontal lines and every pair of vertical lines
-        for horizontal_pair in list(combinations(horizontal_lines, 2)):
-            for vertical_pair in list(combinations(vertical_lines, 2)):
-                h1, h2 = horizontal_pair
-                v1, v2 = vertical_pair
-                # Finding intersection points of all lines
-                i1 = line_intersection((tuple(h1[:2]), tuple(h1[2:])), (tuple(v1[0:2]), tuple(v1[2:])))
-                i2 = line_intersection((tuple(h1[:2]), tuple(h1[2:])), (tuple(v2[0:2]), tuple(v2[2:])))
-                i3 = line_intersection((tuple(h2[:2]), tuple(h2[2:])), (tuple(v1[0:2]), tuple(v1[2:])))
-                i4 = line_intersection((tuple(h2[:2]), tuple(h2[2:])), (tuple(v2[0:2]), tuple(v2[2:])))
-
-                intersections = [i1, i2, i3, i4]
-                intersections = sort_intersection_points(intersections)
+        for h_pair, v_pair in product(combinations(horizontal_lines, 2), combinations(vertical_lines, 2)):
+                h1, h2 = h_pair
+                v1, v2 = v_pair
+                
+                # 2개의 직선이 교차하는 지점을 찾음
+                intersections = sort_intersection_points([
+                    line_intersection((h1[:2], h1[2:]), (v1[0:2], v1[2:])),
+                    line_intersection((h1[:2], h1[2:]), (v2[0:2], v2[2:])),
+                    line_intersection((h2[:2], h2[2:]), (v1[0:2], v1[2:])),
+                    line_intersection((h2[:2], h2[2:]), (v2[0:2], v2[2:]))
+                ])
 
                 for i, configuration in self.court_reference.court_conf.items():
-                    # Find transformation
+                    # Find transformation (3x3 행렬)
                     matrix, _ = cv2.findHomography(np.float32(configuration), np.float32(intersections), method=0)
                     inv_matrix = cv2.invert(matrix)[1]
+                    
                     # Get transformation score
                     confi_score = self._get_confi_score(matrix)
 
@@ -242,8 +258,6 @@ class CourtDetector:
                         max_mat = matrix
                         max_inv_mat = inv_matrix
                         self.best_conf = i
-
-                    k += 1
 
         if self.verbose:
             frame = self.frame.copy()
@@ -260,14 +274,27 @@ class CourtDetector:
     def _get_confi_score(self, matrix):
         # transformation score 계산
 
+        # warpPerpective 함수를 사용해서 transform matrix 기반으로 court_reference를 변환
         court = cv2.warpPerspective(self.court_reference.court, matrix, self.frame.shape[1::-1])
+        
+        # 변환된 court_referenced에서 흰색을 1로 설정
         court[court > 0] = 1
+        
+        # 원본 이미지의 grayscale에서 흰색을 1로 설정
         gray = self.gray.copy()
         gray[gray > 0] = 1
+        
+        # court_reference와 원본 테니스 코트에서 겹치는 부분을 1로 설정한 새로운 배열 생성
         correct = court * gray
         wrong = court - correct
+        
+        # 겹치는 부분의 합을 계산해서 correct의 픽셀 수를 계산
         c_p = np.sum(correct)
+        # 겹치지 않는 부분의 합을 계산해서 correct의 픽셀 수를 계산
         w_p = np.sum(wrong)
+        
+        # 변환 점수 계산 후 반환
+        # 테니스 코트 영역이 얼마나 정확하게 감지되었는지를 나타내는 지표
         return c_p - 0.5 * w_p
 
 
@@ -287,6 +314,8 @@ class CourtDetector:
         p = np.array(self.court_reference.get_important_lines(), dtype=np.float32).reshape((-1, 1, 2))
         lines = cv2.perspectiveTransform(p, self.court_warp_matrix[-1]).reshape(-1)
 
+        # lines의 좌표를 court의 각 부분에 할당
+
         self.baseline_top = lines[:4]
         self.baseline_bottom = lines[4:8]
         self.net = lines[8:12]
@@ -299,8 +328,8 @@ class CourtDetector:
         self.bottom_inner_line = lines[36:40]
 
         return lines
-
     
+        
     def get_extra_parts_location(self, frame_num=-1):
         parts = np.array(self.court_reference.get_extra_parts(), dtype=np.float32).reshape((-1, 1, 2))
         parts = cv2.perspectiveTransform(parts, self.court_warp_matrix[frame_num]).reshape(-1)
@@ -316,7 +345,7 @@ class CourtDetector:
         img[int(top[1] - 10):int(top[1] + 10), int(top[0] - 15):int(top[0] + 15), :] = (0, 0, 0)
         return img
     
-
+    
     def get_warped_court(self):
         # warp된 코트를 반환
 
@@ -352,18 +381,16 @@ class CourtDetector:
             plt.title('Subtraction result'), plt.xticks([]), plt.yticks([])
             plt.show()
         return accuracy
+
     
     def track_court(self, frame):
-        """
-        Track court location after detection
-        """
+        # 프레임에서 감지된 테니스 코트의 위치를 추적
+
         copy = frame.copy()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         if self.frame_points is None:
-            conf_points = np.array(self.court_reference.court_conf[self.best_conf], dtype=np.float32).reshape(
-                (-1, 1, 2))
-            self.frame_points = cv2.perspectiveTransform(conf_points,
-                                                         self.court_warp_matrix[-1]).squeeze().round()
+            conf_points = np.array(self.court_reference.court_conf[self.best_conf], dtype=np.float32).reshape((-1, 1, 2))
+            self.frame_points = cv2.perspectiveTransform(conf_points, self.court_warp_matrix[-1]).squeeze().round()
             
         # Lines of configuration on frames
         line1 = self.frame_points[:2]
@@ -394,6 +421,7 @@ class CourtDetector:
                 points_on_line = np.linspace(p1 if p1 is not None else line[0], p2 if p2 is not None else line[1], 102)[1:-1]
 
             new_points = []
+
             # Find max intensity pixel near each point
             for p in points_on_line:
                 p = (int(round(p[0])), int(round(p[1])))
@@ -448,11 +476,8 @@ class CourtDetector:
 
         return self.new_lines
         
-    # 한 frame에서 court에 선을 그리는 함수
     def draw_court_lines(self, frame, lines):
-        """
-        Draw court lines on the frame
-        """
+        # 한 frame에 테니스 코트 선을 그리는 함수
         height, width = frame.shape[:2]
 
         for i in range(0, len(lines), 4):
@@ -506,7 +531,6 @@ if __name__ == '__main__':
     img = cv2.imread('test.png')
     c = CourtDetector()
     c.detect(img)
-    img = c.delete_extra_parts(img)
     cv2.imshow('img', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
