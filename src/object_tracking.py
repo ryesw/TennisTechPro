@@ -3,6 +3,7 @@ from scipy import signal
 import cv2
 import numpy as np
 from ultralytics import YOLO
+from utils import center_of_box
 from collections import defaultdict
 
 class Tracker:
@@ -13,9 +14,11 @@ class Tracker:
         self.track_history = defaultdict(lambda: [])
         self.persons_first_appearance = {}
         self.p1_id = 0
+        self.p1_history = None
         self.p2_id = 0
+        self.p2_history = None
 
-    def detect(self, frame, frame_num):
+    def track(self, frame, frame_num):
         results = self.tracker.track(frame, persist=True) # tracking
         boxes = results[0].boxes
         persons_boxes = results[0].boxes.xyxy.cpu().numpy().tolist() # 탐지한 모든 box 좌표
@@ -44,24 +47,28 @@ class Tracker:
         self.p2_id = top_two_ids[1]
         print(self.p1_id, self.p2_id)
 
-        self.player1_boxes = self.track_history[self.p1_id]
-        self.player2_boxes = self.track_history[self.p2_id]
+        self.p1_history = self.track_history[self.p1_id]
+        self.p2_history = self.track_history[self.p2_id]
 
     def mark_boxes(self, frame, frame_num):
         # 선수들을 제일 처음 detection한 frame 번호
         p1_first_appearance_frame = self.persons_first_appearance[self.p1_id]
         p2_first_appearance_frame = self.persons_first_appearance[self.p2_id]
-        
-        p1_boxes, p2_boxes = None, None # pose estimation을 위한 box 좌표
 
         # 현재 프레임보다 같거나 이전에 선수를 처음 탐지했을 때 box를 그림
-        if p1_first_appearance_frame <= frame_num and p1_first_appearance_frame+len(self.player1_boxes)>frame_num:
-            p1_boxes = self.player1_boxes[frame_num - p1_first_appearance_frame]
+        if p1_first_appearance_frame <= frame_num and p1_first_appearance_frame + len(self.p1_history) > frame_num:
+            p1_boxes = self.p1_history[frame_num - p1_first_appearance_frame]
             frame = cv2.rectangle(frame, (int(p1_boxes[0]), int(p1_boxes[1])), (int(p1_boxes[2]), int(p1_boxes[3])), [255, 0, 255], 2)
+        else:
+            p1_boxes = None
+        self.player1_boxes.append(p1_boxes)
 
-        if p2_first_appearance_frame <= frame_num and p2_first_appearance_frame+len(self.player2_boxes)>frame_num:
-            p2_boxes = self.player2_boxes[frame_num - p2_first_appearance_frame]
+        if p2_first_appearance_frame <= frame_num and p2_first_appearance_frame + len(self.p2_history) > frame_num:
+            p2_boxes = self.p2_history[frame_num - p2_first_appearance_frame]
             frame = cv2.rectangle(frame, (int(p2_boxes[0]), int(p2_boxes[1])), (int(p2_boxes[2]), int(p2_boxes[3])), [255, 255, 0], 2)
+        else:
+            p2_boxes = None
+        self.player2_boxes.append(p2_boxes)
 
         return frame, p1_boxes, p2_boxes
     
@@ -123,13 +130,6 @@ class Tracker:
         print('Player 1 Object Detection Count: ', len(self.player1_boxes))
         print('Player 2 Object Detection Count: ', len(self.player2_boxes))
 
-
-def center_of_box(box):
-    if box[0] is None:
-        return None, None
-    height = box[3] - box[1]
-    width = box[2] - box[0]
-    return box[0] + width / 2, box[1] + height / 2
 
 def calculate_all_persons_dists(persons_boxes):
     persons_dists = {}
