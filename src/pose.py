@@ -20,7 +20,7 @@ class PoseExtractor:
         self.p1_keypoints = []
         self.p2_keypoints = []
         self.line_width = 2
-        self.margin = 10
+        self.margin = 15
         self.player_1_count = 0
         self.player_2_count = 0
         self.line_connection = [(7, 9), (7, 5), (10, 8), (8, 6), (6, 5), (15, 13),
@@ -59,9 +59,12 @@ class PoseExtractor:
 
             p1_patch, kpts = self._annotate_pose_on_patch(patch)
             image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p1_patch
-            self.p1_keypoints.append(kpts)
-
-            self.player_1_count += 1
+            
+            if len(kpts) != 0:
+                self.p1_keypoints.append(kpts)
+                self.player_1_count += 1
+            else:
+                self.p1_keypoints.append(np.zeros(34))
         else:
             self.p1_keypoints.append(np.zeros(34))
 
@@ -81,12 +84,15 @@ class PoseExtractor:
             
             p2_patch, kpts = self._annotate_pose_on_patch(patch)
             image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p2_patch
-            self.p2_keypoints.append(kpts)
-
-            self.player_2_count += 1
+            
+            if len(kpts) != 0:
+                self.p2_keypoints.append(kpts)
+                self.player_2_count += 1
+            else:
+                self.p2_keypoints.append(np.zeros(34))
         else:
             self.p2_keypoints.append(np.zeros(34))
-
+            
         return image
     
 
