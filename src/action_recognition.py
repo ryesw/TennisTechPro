@@ -8,34 +8,81 @@ from tensorflow.keras.models import load_model
 
 class ActionRecognition:
     def __init__(self):
-        self.model = load_model('models/best.h5')
+        self.model = load_model('models/gru/gru64masking.h5')
         self.seq_length = 60
-        self.motions = ['backhand', 'forehand', 'service', 'smash']
+        self.motions = ['backhand', 'forehand', 'service', 'smash', 'backhand_volley', 'forehand_volley']
+        self.player1_predictions = {}
+        self.player2_predictions = {}
 
-    def predict(self, p1_boxes, p2_boxes, p1_keypoints_df, p2_keypoints_df, ball_positions, total_frame):
+    def predict(self, tracker, p1_keypoints_df, p2_keypoints_df, ball_positions, total_frame):
+        p1_boxes = tracker.player1_boxes
+        p2_boxes = tracker.player2_boxes
+        p1_first_appearance_frame = tracker.p1_first_appearance_frame
+        p2_first_appearance_frame = tracker.p2_first_appearance_frame
+
+        # bottom 선수와 top 선수의 box 좌표를 구분
+        # if p1_boxes[p1_first_appearance_frame][1] < p2_boxes[p2_first_appearance_frame][1]:
+        #     swap = p1_boxes
+        #     p1_boxes = p2_boxes
+        #     p2_boxes = swap
+
         p1_motion_frames = find_p1_motion_frame(p1_boxes, ball_positions, p1_keypoints_df)
         p2_motion_frames = find_p2_motion_frame(p2_boxes, ball_positions, p2_keypoints_df)
-        print(p1_motion_frames)
-        print(p2_motion_frames)
-        # y_pred = self.model.predict()
+
         for frame_num in p1_motion_frames:
-            p1_kpts = self.get_p1_keypoints(frame_num, p1_keypoints_df, total_frame)
-
-
+            probs, motion = self.predict_p1_motion(frame_num, p1_keypoints_df, total_frame)
+            self.player1_predictions[frame_num] = {'probs': probs, 'motion': motion}
+            
         for frame_num in p2_motion_frames:
-            p2_kpts = self.get_p1_keypoints(frame_num, p2_keypoints_df, total_frame)
+            probs, motion = self.predict_p2_motion(frame_num, p2_keypoints_df, total_frame)
+            self.player2_predictions[frame_num] = {'probs': probs, 'motion': motion}
 
+        return self.player1_predictions, self.player2_predictions
 
-    def get_p1_keypoints(self, frame_num, p1_keypoints_df, total_frame):
+    def predict_p1_motion(self, frame_num, p1_keypoints_df, total_frame):
+        p1_keypoints_df = p1_keypoints_df.drop(p1_keypoints_df.columns[2:10], axis=1) # eye와 ear에 관련된 column 제거
         p1_keypoints = p1_keypoints_df.values
 
-        before_row = max(0, frame_num - int(self.seq_length / 2 + 1))
-        after_row = max(frame_num +int(self.seq_length / 2), total_frame)
-        kpts = p1_keypoints[before_row : after_row]
+        # bottom player의 좌표를 좌우 대칭
+        # p1_keypoints = np.array([[1 - value if index % 2 == 0 else value for index, value in enumerate(inner_list)] for inner_list in p1_keypoints])
+
+        mid = int(self.seq_length // 2)
+        before_row = max(0, frame_num - mid - 1)
+        after_row = min(before_row + self.seq_length, total_frame)
         
-        return kpts
+        if before_row == 0:
+            kpts = p1_keypoints[before_row : before_row + self.seq_length]
+        elif after_row == total_frame:
+            kpts = p1_keypoints[after_row - self.seq_length : after_row]
+        else:
+            kpts = p1_keypoints[before_row : after_row]
 
+        kpts = np.array(kpts).reshape(1, self.seq_length, 26)
+        probs = self.model.predict(kpts)[0]
+        idx = np.argmax(probs)
 
+        return probs[idx], self.motions[idx]
+
+    def predict_p2_motion(self, frame_num, p2_keypoints_df, total_frame):
+        p2_keypoints_df = p2_keypoints_df.drop(p2_keypoints_df.columns[2:10], axis=1) # eye와 ear에 관련된 column 제거
+        p2_keypoints = p2_keypoints_df.values
+
+        mid = int(self.seq_length // 2)
+        before_row = max(0, frame_num - mid - 1)
+        after_row = min(before_row + self.seq_length, total_frame)
+
+        if before_row == 0:
+            kpts = p2_keypoints[before_row : before_row + self.seq_length]
+        elif after_row == total_frame:
+            kpts = p2_keypoints[after_row - self.seq_length : after_row]
+        else:
+            kpts = p2_keypoints[before_row : after_row]
+            
+        kpts = np.array(kpts).reshape(1, self.seq_length, 26)
+        probs = self.model.predict(kpts)[0]
+        idx = np.argmax(probs)
+
+        return probs[idx], self.motions[idx]
 
 
 def find_p1_motion_frame(p1_boxes, ball_positions, p1_keypoints_df):
@@ -66,7 +113,7 @@ def find_p1_motion_frame(p1_boxes, ball_positions, p1_keypoints_df):
     dists = np.array(dists)
 
     p1_motion_indices = []
-    print(peaks)
+    print('p1 peaks: ', peaks)
     for peak in peaks:
         player_box_height = max(p1_boxes[peak][3] - p1_boxes[peak][1], 130)
         if dists[peak] < (player_box_height * 4 / 5):
@@ -84,6 +131,7 @@ def find_p1_motion_frame(p1_boxes, ball_positions, p1_keypoints_df):
         if len(to_del) == 0:
             break
 
+    print('p1 motion indices: ', p1_motion_indices)
     return p1_motion_indices
 
 def find_p2_motion_frame(p2_boxes, ball_positions, p2_keypoints_df):
@@ -93,7 +141,7 @@ def find_p2_motion_frame(p2_boxes, ball_positions, p2_keypoints_df):
     right_wrist_pos = p2_keypoints_df.iloc[:, [right_wrist_index, right_wrist_index+1]].values
 
     peaks, _ = find_peaks(ball_positions[:, 1] * (-1))
-    print(peaks)
+    print('p2 peaks: ', peaks)
     dists = []
     for i, p1_box in enumerate(p2_boxes):
         if p1_box is not None:
@@ -131,4 +179,5 @@ def find_p2_motion_frame(p2_boxes, ball_positions, p2_keypoints_df):
         if len(to_del) == 0:
             break
 
+    print('p2 motion indices: ', p2_motion_indices)
     return p2_motion_indices
