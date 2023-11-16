@@ -45,16 +45,29 @@ class Tracker:
         # 그 두 키 값이 선수들의 식별 번호(id)
         top_two_ids = [item[0] for item in sorted_dict[:2]]
 
-        self.p1_id = top_two_ids[0]
-        self.p2_id = top_two_ids[1]
-        print(self.p1_id, self.p2_id)
+        id1 = top_two_ids[0]
+        id2 = top_two_ids[1]
+        print(f'id1: {id1}, id2: {id2}')
 
+        # bottom player와 top player를 구분
+        self.separate_players(id1, id2)
+        print(f'p1_id: {self.p1_id}, id2: {self.p2_id}')
+
+        # 각 id에 해당하는 box 좌표를 할당
         self.p1_history = self.track_history[self.p1_id]
         self.p2_history = self.track_history[self.p2_id]
 
         # 선수들을 제일 처음 detection한 frame 번호
         self.p1_first_appearance_frame = self.persons_first_appearance[self.p1_id]
         self.p2_first_appearance_frame = self.persons_first_appearance[self.p2_id]
+
+    def separate_players(self, id1, id2):
+        if self.track_history[id1][self.persons_first_appearance[id1]][1] > self.track_history[id2][self.persons_first_appearance[id2]][1]:
+            self.p1_id = id1
+            self.p2_id = id2
+        else:
+            self.p1_id = id2
+            self.p2_id = id1
 
     def mark_boxes(self, frame, frame_num):
         # 현재 프레임보다 같거나 이전에 선수를 처음 탐지했을 때 box를 그림
