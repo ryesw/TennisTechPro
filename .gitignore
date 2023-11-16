@@ -12,6 +12,12 @@ test/*.png
 # 참고 ipynb 파일
 ref/
 
+# 용량이 큰 yolo 모델
+yolo/
+
+# 용량이 큰 tracknet V2
+models/tracknetV2
+
 # cache 폴더
 src/__pycache__
 
