@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.signal import find_peaks
-
+import matplotlib.pyplot as plt
 from utils import center_of_box
 
 from tensorflow.keras.models import load_model
@@ -17,14 +17,6 @@ class ActionRecognition:
     def predict(self, tracker, p1_keypoints_df, p2_keypoints_df, ball_positions, total_frame):
         p1_boxes = tracker.player1_boxes
         p2_boxes = tracker.player2_boxes
-        p1_first_appearance_frame = tracker.p1_first_appearance_frame
-        p2_first_appearance_frame = tracker.p2_first_appearance_frame
-
-        # bottom 선수와 top 선수의 box 좌표를 구분
-        # if p1_boxes[p1_first_appearance_frame][1] < p2_boxes[p2_first_appearance_frame][1]:
-        #     swap = p1_boxes
-        #     p1_boxes = p2_boxes
-        #     p2_boxes = swap
 
         p1_motion_frames = find_p1_motion_frame(p1_boxes, ball_positions, p1_keypoints_df)
         p2_motion_frames = find_p2_motion_frame(p2_boxes, ball_positions, p2_keypoints_df)
@@ -114,10 +106,11 @@ def find_p1_motion_frame(p1_boxes, ball_positions, p1_keypoints_df):
 
     p1_motion_indices = []
     print('p1 peaks: ', peaks)
-    for peak in peaks:
-        player_box_height = max(p1_boxes[peak][3] - p1_boxes[peak][1], 130)
-        if dists[peak] < (player_box_height * 4 / 5):
-            p1_motion_indices.append(peak)
+    # for peak in peaks:
+    #     player_box_height = max(p1_boxes[peak][3] - p1_boxes[peak][1], 130)
+    #     if dists[peak] < (player_box_height * 4 / 5):
+    #         p1_motion_indices.append(peak)
+    p1_motion_indices = peaks
 
     while True:
         diffs = np.diff(p1_motion_indices)
@@ -131,6 +124,10 @@ def find_p1_motion_frame(p1_boxes, ball_positions, p1_keypoints_df):
         if len(to_del) == 0:
             break
 
+    plt.plot(ball_positions[:, 1])
+    plt.plot(peaks, ball_positions[:, 1][peaks], 'x')
+    plt.show()
+    
     print('p1 motion indices: ', p1_motion_indices)
     return p1_motion_indices
 
@@ -141,7 +138,6 @@ def find_p2_motion_frame(p2_boxes, ball_positions, p2_keypoints_df):
     right_wrist_pos = p2_keypoints_df.iloc[:, [right_wrist_index, right_wrist_index+1]].values
 
     peaks, _ = find_peaks(ball_positions[:, 1] * (-1))
-    print('p2 peaks: ', peaks)
     dists = []
     for i, p1_box in enumerate(p2_boxes):
         if p1_box is not None:
@@ -162,10 +158,12 @@ def find_p2_motion_frame(p2_boxes, ball_positions, p2_keypoints_df):
     dists = np.array(dists)
 
     p2_motion_indices = []
-    for peak in peaks:
-        player_box_height = max(p2_boxes[peak][3] - p2_boxes[peak][1], 130)
-        if dists[peak] < (player_box_height * 4 / 5):
-            p2_motion_indices.append(peak)
+    print('p2 peaks: ', peaks)
+    # for peak in peaks:
+    #     player_box_height = max(p2_boxes[peak][3] - p2_boxes[peak][1], 130)
+    #     if dists[peak] < (player_box_height * 4 / 5):
+    #         p2_motion_indices.append(peak)
+    p2_motion_indices = peaks
 
     while True:
         diffs = np.diff(p2_motion_indices)
@@ -178,6 +176,10 @@ def find_p2_motion_frame(p2_boxes, ball_positions, p2_keypoints_df):
         p2_motion_indices = np.delete(p2_motion_indices, to_del)
         if len(to_del) == 0:
             break
+
+    plt.plot(ball_positions[:, 1] * (-1))
+    plt.plot(peaks, (ball_positions[:, 1] * (-1))[peaks], 'x')
+    plt.show()
 
     print('p2 motion indices: ', p2_motion_indices)
     return p2_motion_indices

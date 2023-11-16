@@ -6,13 +6,14 @@ from court_detection import CourtDetector
 from object_tracking import Tracker
 from pose import PoseExtractor
 from action_recognition import ActionRecognition
-from ball_detection_ver2 import BallDetector
+from ball_detection_pytorch import BallDetector
+# from ball_detection_ver2 import BallDetector
 from utils import get_video_properties
 
 def merge(frame, image):
     frame_h, frame_w = frame.shape[:2]
 
-    width = frame_w // 4
+    width = int(frame_w // 4.5)
     resized = imutils.resize(image, width=width)
 
     img_h, img_w = resized.shape[:2]
@@ -168,6 +169,9 @@ def process(input_video_path, output_video_path):
     video.release() # Video 획득 개체를 해제
     analysis_video.release() # Video 획득 개체를 해제
 
+    print('p1_boxes\n', tracker.player1_boxes)
+    print('p2_boxes\n', tracker.player2_boxes)
+
     # Third Part: Processing ball coordinates
     print('전처리 전 \n', ball_detector.xy_coordinates)
     ball_detector.preprocessing_ball_coords()
@@ -194,6 +198,6 @@ def process(input_video_path, output_video_path):
     pose_extractor.print_counts()
 
 if __name__ == '__main__':
-    input_video_path = 'test/video_input1.mp4'
+    input_video_path = 'test/video_input3.mp4'
     output_video_path = 'output/output.mp4'
     process(input_video_path, output_video_path)

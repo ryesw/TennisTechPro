@@ -1,8 +1,8 @@
 from keras.models import Model
 from keras.layers import Input, Conv2D, Activation, BatchNormalization, MaxPooling2D, UpSampling2D, Reshape, Permute
 
-def TrackNet(n_classes=256, input_heigth=360, input_width=640):
-    input = Input(shape=(3, input_heigth, input_width))
+def TrackNet(input_shape, n_classes=256, input_heigth=360, input_width=640):
+    input = Input(shape=(input_shape, input_heigth, input_width))
 
     # layer 1
     x = Conv2D(64, (3, 3), kernel_initializer='random_uniform', padding='same', data_format='channels_first')(input)

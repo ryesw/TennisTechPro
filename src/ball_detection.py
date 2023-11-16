@@ -4,7 +4,7 @@ import numpy as np
 from scipy import signal
 from scipy.interpolate import interp1d
 from PIL import Image, ImageDraw
-from TRACKNET import TrackNet
+from tracknetV1 import TrackNet
 
 def combine_three_frames(current_frame, before_last_frame, last_frame, width, height):
     """
@@ -35,10 +35,16 @@ def combine_three_frames(current_frame, before_last_frame, last_frame, width, he
 
 class BallDetector:
     def __init__(self):
-        self.tracknet = TrackNet()
+        """
+        If you want three frame, modify input_shape as 9, 
+        weights as 'models/tracknetV1/tracknet_three_frame.h5',
+        and xy_coordinates as [None, None].
+        Because the ball coordinates of first and second frame are not predicted.
+        """
+        self.tracknet = TrackNet(input_shape=3) 
         self.tracknet.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
-        self.tracknet.load_weights('models/tracknet.h5') # 'models/weights.h5' -> three frame
-        self.xy_coordinates = [] # [None, None] -> three frame에서 처음 두 프레임의 좌표는 predict하지 않기 때문
+        self.tracknet.load_weights('models/tracknetV1/tracknet_one_frame.h5')
+        self.xy_coordinates = []
 
         self.current_frame = None
         self.last_frame = None
