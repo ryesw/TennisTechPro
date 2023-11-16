@@ -3,7 +3,9 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from yolo import thetis_model
+from ultralytics import YOLO
+
+thetis_model = YOLO('yolo/yolov8l-pose.pt')
 
 def save_video_paths_to_csv():
     """

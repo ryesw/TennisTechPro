@@ -2,12 +2,13 @@ import torch
 from scipy import signal
 import cv2
 import numpy as np
-from yolo import detection_model
+
+from ultralytics import YOLO
 from ultralytics.utils.plotting import Annotator
 
 class DetectionModel:
     def __init__(self, match_type=2, dtype=torch.FloatTensor):
-        self.detection_model = detection_model
+        self.detection_model = YOLO('yolo/clip.pt')
         self.match_type = match_type # 단식 2명, 복식 4명
         self.dtype = dtype
         self.BOTTOM_PLAYER_1 = 0

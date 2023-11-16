@@ -4,13 +4,13 @@ import torch
 import numpy as np
 import pandas as pd
 
-from yolo import pose_model
+from ultralytics import YOLO
 from ultralytics.utils.plotting import Annotator
 
 
 class PoseExtractor:
     def __init__(self, person_num=2, box=False, dtype=torch.FloatTensor):
-        self.pose_model = pose_model # YOLO Pose 모델 추가
+        self.pose_model = YOLO('yolo/yolov8l-pose.pt')
         self.dtype = dtype
         self.person_num = person_num  # 단식: 2명, 복식: 4명
         self.box = box # box 표시할건지
