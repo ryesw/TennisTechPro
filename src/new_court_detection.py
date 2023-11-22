@@ -12,8 +12,6 @@ import torch.nn.functional as F
 from postprocess import postprocess, refine_kps
 from homography import get_trans_matrix
 
-
-
 class CourtDetector:
     # Frame에서 테니스 코트를 추출하고 tracking 하는 클래스
     def __init__(self, verbose=0, out_channels=15):
