@@ -10,7 +10,7 @@ import torch
 from tracknet import BallTrackerNet
 import torch.nn.functional as F
 from postprocess import postprocess, refine_kps
-from homography import get_trans_matrix
+from scipy.spatial import distance
 
 class CourtDetector:
     # Frame에서 테니스 코트를 추출하고 tracking 하는 클래스
@@ -32,7 +32,7 @@ class CourtDetector:
 
         self.court_warp_matrix = [] # transformation matrix
         self.game_warp_matrix = [] # transformation inverse matrix
-
+        self.best_conf = None
         '''
         self.baseline_top = None
         self.baseline_bottom = None
@@ -97,7 +97,7 @@ class CourtDetector:
             heatmap = (pred[kps_num]*255).astype(np.uint8)
             x_pred, y_pred = postprocess(heatmap, low_thresh=170, max_radius=25)
             # keypoint 보정 함수 사용 -> keypoint 더 정확하게 조정
-            if kps_num not in [8, 12, 9] and x_pred and y_pred:
+            if kps_num not in [8, 9, 12] and x_pred and y_pred:
                 x_pred, y_pred = refine_kps(frame, int(y_pred), int(x_pred))
             points.append((x_pred, y_pred))
         
@@ -117,13 +117,39 @@ class CourtDetector:
                 inds.append(court_ref.key_points.index(conf[j]))
             court_conf_ind[i+1] = inds
         
-        max_mat, max_inv_mat = get_trans_matrix(court_ref, court_conf_ind, points)
+        max_mat, max_inv_mat = self._get_trans_matrix(court_ref, court_conf_ind, points, refer_kps)
         if max_mat is not None:
             points = cv2.perspectiveTransform(refer_kps, max_mat)
             points = [np.squeeze(x) for x in points]
 
         return max_mat, max_inv_mat 
     
+    def _get_trans_matrix(self, court_ref, court_conf_ind, points, refer_kps):
+        dist_max = np.Inf
+        matrix_trans = None
+        inv_matrix_trans = None
+
+        for conf_ind in range(1, 13):
+            conf = court_ref.court_conf[conf_ind]
+
+            inds = court_conf_ind[conf_ind]
+            inters = [points[inds[0]], points[inds[1]], points[inds[2]], points[inds[3]]]
+            if not any([None in x for x in inters]):
+                matrix, _ = cv2.findHomography(np.float32(conf), np.float32(inters), method=0)
+                inv_matrix = cv2.invert(matrix)[1]
+                trans_kps = cv2.perspectiveTransform(refer_kps, matrix)
+                dists = []
+                for i in range(12):
+                    if i not in inds and points[i][0] is not None:
+                        # 두 지점 간의 유클리디안 거리 계산 -> 변환의 정확도 확인
+                        dists.append(distance.euclidean(np.array(points[i]).flatten(), np.array(trans_kps[i]).flatten()))
+                dist_median = np.mean(dists)
+                if dist_median < dist_max:
+                    matrix_trans = matrix
+                    inv_matrix_trans = inv_matrix
+                    dist_max = dist_median
+                    self.best_conf = conf_ind
+        return matrix_trans, inv_matrix_trans
 
     def find_lines_location(self):
         # 테니스 코트에서 주요 직선들의 위치를 찾음
@@ -238,27 +264,15 @@ class CourtDetector:
         self.new_lines = cv2.perspectiveTransform(self.pts, self.court_warp_matrix[-1]).reshape(-1)
 
         return self.new_lines
-        
-    def draw_court_lines(self, frame, lines):
-        # 한 frame에 테니스 코트 선을 그리는 함수
-        height, width = frame.shape[:2]
 
-        for i in range(0, len(lines), 4):
-            x1, y1, x2, y2 = lines[i], lines[i+1], lines[i+2], lines[i+3]
-            cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0,0,255), 5)
+def line_intersection(line1, line2):
+    # 2개 직선이 서로 교차하는 점을 찾음
 
-        new_frame = cv2.resize(frame, (width, height))
-        return new_frame
+    l1 = Line(line1[0], line1[1])
+    l2 = Line(line2[0], line2[1])
 
-def sort_intersection_points(intersections):
-    # 교차점들을 정렬 (왼쪽 상단 -> 오른쪽 하단)
-
-    y_sorted = sorted(intersections, key=lambda x: x[1])
-    p12 = y_sorted[:2]
-    p34 = y_sorted[2:]
-    p12 = sorted(p12, key=lambda x: x[0])
-    p34 = sorted(p34, key=lambda x: x[0])
-    return p12 + p34
+    intersection = l1.intersection(l2)
+    return intersection[0].coordinates
 
 def display_lines_on_frame(frame, horizontal=(), vertical=()):
     # 이미지에서 직선들을 표시해서 보여주는 함수
