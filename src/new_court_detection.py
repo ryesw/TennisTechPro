@@ -9,7 +9,7 @@ import cv2
 import torch
 from tracknet import BallTrackerNet
 import torch.nn.functional as F
-from postprocess import postprocess, refine_kps, line_intersection
+from postprocess import postprocess, refine_kps, line_intersection_post
 from scipy.spatial import distance
 
 class CourtDetector:

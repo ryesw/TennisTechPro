@@ -4,7 +4,7 @@ import sympy
 from sympy import Line
 from scipy.spatial import distance
 
-def line_intersection(line1, line2):
+def line_intersection_post(line1, line2):
     # 2개 직선이 서로 교차하는 점을 찾음
 
     l1 = Line((line1[0], line1[1]), (line1[2], line1[3]))
@@ -50,7 +50,7 @@ def refine_kps(img, x_ct, y_ct, crop_size=40):
         lines = merge_lines(lines)
         if len(lines) == 2:
             # 교차점 찾기
-            inters = line_intersection(lines[0], lines[1])
+            inters = line_intersection_post(lines[0], lines[1])
             print(inters)
             # 유효한 교차점은 해당 좌표로 보정된 좌표 변환
             if inters:
