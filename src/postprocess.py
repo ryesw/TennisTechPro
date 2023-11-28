@@ -1,16 +1,21 @@
 import cv2
 import numpy as np
+import sympy
 from sympy import Line
 from scipy.spatial import distance
 
 def line_intersection(line1, line2):
     # 2개 직선이 서로 교차하는 점을 찾음
 
-    l1 = Line(line1[0], line1[1])
-    l2 = Line(line2[0], line2[1])
+    l1 = Line((line1[0], line1[1]), (line1[2], line1[3]))
+    l2 = Line((line2[0], line2[1]), (line2[2], line2[3]))
 
     intersection = l1.intersection(l2)
-    return intersection[0].coordinates
+    point = None
+    if len(intersection) > 0:
+        if isinstance(intersection[0], sympy.geometry.point.Point2D):
+            point = intersection[0].coordinates
+    return point
 
 # 히트맵 처리
 def postprocess(heatmap, scale=3, low_thresh=155, min_radius=10, max_radius=30):
@@ -46,6 +51,7 @@ def refine_kps(img, x_ct, y_ct, crop_size=40):
         if len(lines) == 2:
             # 교차점 찾기
             inters = line_intersection(lines[0], lines[1])
+            print(inters)
             # 유효한 교차점은 해당 좌표로 보정된 좌표 변환
             if inters:
                 new_x_ct = int(inters[1])

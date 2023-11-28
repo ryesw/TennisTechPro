@@ -9,7 +9,7 @@ import cv2
 import torch
 from tracknet import BallTrackerNet
 import torch.nn.functional as F
-from postprocess import postprocess, refine_kps
+from postprocess import postprocess, refine_kps, line_intersection
 from scipy.spatial import distance
 
 class CourtDetector:
@@ -27,8 +27,9 @@ class CourtDetector:
         # pretrained model 불러오기
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.detector = BallTrackerNet(out_channels=out_channels)
+        self.detector = self.detector.to(self.device)
         self.detector.load_state_dict(torch.load('models/model_tennis_court_det.pt', map_location=self.device))
-        self.detector.eval().to(self.device)
+        self.detector.eval()
 
         self.court_warp_matrix = [] # transformation matrix
         self.game_warp_matrix = [] # transformation inverse matrix
@@ -56,10 +57,10 @@ class CourtDetector:
         self.v_height, self.v_width = frame.shape[:2]
 
         # 이미지 전처리
-        pp_img = self._preprocess_img(frame)
+        img = self._preprocess_img(frame)
 
         # 테니스 코트 14개 keypoint 예측
-        out = self.detector(pp_img.float().to(self.device))[0]
+        out = self.detector(img.float().to(self.device))[0]
         pred = F.sigmoid(out).detach().cpu().numpy()
 
         # 이미지 후처리
