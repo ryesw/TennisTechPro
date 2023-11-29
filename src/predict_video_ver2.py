@@ -1,6 +1,9 @@
+
 import cv2
 import imutils
 import time
+
+
 
 from court_detection import CourtDetector
 from object_tracking import Tracker
@@ -184,6 +187,7 @@ def process(input_video_path, output_video_path):
     print('p2_motions\n', p2_predictions)
 
     # Fifth Part: Add minimap in video
+    #create_minimap(court_detector, ball_detector, fps)
     create_minimap(court_detector, tracker, ball_detector, fps, p1_predictions, p2_predictions) # minimap video를 생성
     add_minimap(output_video_path) # output video와 minimap video를 합친 하나의 video 생성
     

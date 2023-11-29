@@ -98,7 +98,18 @@ class BallDetector:
 
     def preprocessing_ball_coords(self):
         print('Preprocessing ball coordinates...')
-        self.xy_coordinates = np.array([[None, None] if coord is None else coord for coord in self.xy_coordinates])
+        filled_coordinates = []
+        prev_coord = None
+
+        for coord in self.xy_coordinates:
+            if coord is not None:
+                filled_coordinates.append(coord)
+                prev_coord = coord
+            else:
+                filled_coordinates.append(prev_coord)
+
+        self.xy_coordinates = np.array(filled_coordinates)
+        #self.xy_coordinates = np.array([[None, None] if coord is None else coord for coord in self.xy_coordinates])
         ball_x, ball_y = self.xy_coordinates[:, 0], self.xy_coordinates[:, 1]
         smooth_x = signal.savgol_filter(ball_x, 5, 2)
         smooth_y = signal.savgol_filter(ball_y, 5, 2)
