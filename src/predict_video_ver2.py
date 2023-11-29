@@ -26,7 +26,7 @@ def merge(frame, image):
 
     return frame
 
-def create_minimap(court_detector, tracker, ball_detector, fps, p1_predictions, p2_predictions):
+def create_minimap(court_detector, tracker, ball_detector, fps):
     """
     Creates top view video of the gameplay
     """
@@ -40,33 +40,16 @@ def create_minimap(court_detector, tracker, ball_detector, fps, p1_predictions, 
 
     # Marking players location on court
     frame_num = 0
-    p1_frame, p2_frame = -11, -11
     smoothed_1, smoothed_2 = tracker.calculate_feet_positions(court_detector) # 선수들의 발 좌표 계산
     for feet_pos_1, feet_pos_2 in zip(smoothed_1, smoothed_2):
         frame = court.copy()
         if feet_pos_1[0] is not None:
             frame = cv2.circle(frame, (int(feet_pos_1[0]), int(feet_pos_1[1])), 30, (255, 0, 255), -1) # 선수 1의 발 좌표를 미니맵에 표시
             
-            # 선수 1의 동작을 미니맵에 표시
-            if frame_num + 10 in p1_predictions.keys():
-                p1_frame = frame_num + 10
-                p1_motion = p1_predictions[p1_frame]['motion']
-
-            if frame_num <= p1_frame + 10:
-                frame = cv2.putText(frame, p1_motion, (int(feet_pos_1[0] + 25), int(feet_pos_1[1]) + 20), cv2.FONT_HERSHEY_DUPLEX, 3, (255, 0, 255), 4)
-        
         if feet_pos_2[0] is not None:
             frame = cv2.circle(frame, (int(feet_pos_2[0]), int(feet_pos_2[1])), 30, (255, 255, 0), -1) # 선수 2의 발 좌표를 미니맵에 표시
 
-            # 선수 2의 동작을 미니맵에 표시
-            if frame_num + 10 in p2_predictions.keys():
-                p2_frame = frame_num + 10
-                p2_motion = p2_predictions[p2_frame]['motion']
-
-            if frame_num <= p2_frame + 10:
-                frame = cv2.putText(frame, p2_motion, (int(feet_pos_2[0] + 25), int(feet_pos_2[1]) - 20), cv2.FONT_HERSHEY_DUPLEX, 3, (255, 255, 0), 4)
-        
-        frame = ball_detector.draw_ball_position_in_minimap(frame, court_detector, frame_num) # ball의 좌표를 미니맵에 표시
+        frame = ball_detector.draw_ball_position_in_minimap(frame, court_detector, frame_num) # Ball의 좌표를 미니맵에 표시
         frame_num += 1
         out.write(frame)
     out.release()
@@ -138,7 +121,7 @@ def process(input_video_path, output_video_path):
     video.release() # Video 획득 개체를 해제
 
 
-    # Second Part: Player Detection, Court Detection, Pose Estimation
+    # Second Part: Player Detection, Court Detection, Pose Estimation, Action Recognition
     tracker.find_players_boxes()
 
     video = cv2.VideoCapture(input_video_path)
@@ -160,6 +143,9 @@ def process(input_video_path, output_video_path):
             # Pose Estimation
             frame = pose_extractor.extract_pose(frame, p1_boxes, p2_boxes)
 
+            # Action Recognition
+            frame = action_recognition.predict_players_motion(frame, frame_num, pose_extractor.p1_keypoints, pose_extractor.p2_keypoints)
+
             # Draw court lines
             new_frame = court_detector.draw_court_lines(frame, lines)
             frames.append(new_frame)
@@ -180,6 +166,7 @@ def process(input_video_path, output_video_path):
     ball_detector.preprocessing_ball_coords()
     print('전처리 후 \n', ball_detector.xy_coordinates)
 
+<<<<<<< HEAD
     # Fourth Part: Action Recognition
     p1_df, p2_df = pose_extractor.save_to_csv() # 선수들의 pose를 추정한 좌표를 저장
     p1_predictions, p2_predictions = action_recognition.predict(tracker, p1_df, p2_df, ball_detector.xy_coordinates, frame_num)
@@ -189,6 +176,10 @@ def process(input_video_path, output_video_path):
     # Fifth Part: Add minimap in video
     #create_minimap(court_detector, ball_detector, fps)
     create_minimap(court_detector, tracker, ball_detector, fps, p1_predictions, p2_predictions) # minimap video를 생성
+=======
+    # Fourth Part: Add minimap in video
+    create_minimap(court_detector, tracker, ball_detector, fps) # minimap video를 생성
+>>>>>>> e55074ae359823e90594987c54bea6277763267b
     add_minimap(output_video_path) # output video와 minimap video를 합친 하나의 video 생성
     
     # Measure processing time
@@ -202,6 +193,6 @@ def process(input_video_path, output_video_path):
     pose_extractor.print_counts()
 
 if __name__ == '__main__':
-    input_video_path = 'test/video_input6.mp4'
+    input_video_path = 'test/video_input1.mp4'
     output_video_path = 'output/output.mp4'
     process(input_video_path, output_video_path)
