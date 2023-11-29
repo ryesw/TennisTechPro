@@ -10,7 +10,7 @@ from ultralytics.utils.plotting import Annotator
 
 class PoseExtractor:
     def __init__(self, person_num=2, box=False, dtype=torch.FloatTensor):
-        self.pose_model = YOLO('yolo/yolov8l-pose.pt')
+        self.pose_model = YOLO('yolo/yolov8n-pose.pt')
         self.dtype = dtype
         self.person_num = person_num  # 단식: 2명, 복식: 4명
         self.box = box # box 표시할건지
@@ -26,10 +26,10 @@ class PoseExtractor:
         self.line_connection = [(7, 9), (7, 5), (10, 8), (8, 6), (6, 5), (15, 13),
                                 (13, 11), (11, 12), (12, 14), (14, 16), (5, 11), (12, 6)] # Court Line
         self.COCO_PERSON_KEYPOINT_NAMES = [
-            'nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear', 'left_shoulder', 'right_shoulder', 'left_elbow',
+            'nose', 'left_shoulder', 'right_shoulder', 'left_elbow',
             'right_elbow', 'left_wrist', 'right_wrist', 'left_hip', 'right_hip', 'left_knee', 'right_knee',
             'left_ankle', 'right_ankle'
-        ]
+        ] # 'left_eye', 'right_eye', 'left_ear', 'right_ear' 제거
         self.AIHUB_PERSON_KEYPOINT_NAMES = [
             'head', 'neck', 'chst', 'bely', 'sdlf', 'sdrt', 'eblf', 'ebrt', 'wtlf', 'wtrt', 'hplf', 'hprt', 'knlf', 'knrt', 'aklf', 'akrt'
             ]
@@ -64,9 +64,9 @@ class PoseExtractor:
                 self.p1_keypoints.append(kpts)
                 self.player_1_count += 1
             else:
-                self.p1_keypoints.append(np.zeros(34))
+                self.p1_keypoints.append(np.zeros(26))
         else:
-            self.p1_keypoints.append(np.zeros(34))
+            self.p1_keypoints.append(np.zeros(26))
 
         return image
 
@@ -89,9 +89,9 @@ class PoseExtractor:
                 self.p2_keypoints.append(kpts)
                 self.player_2_count += 1
             else:
-                self.p2_keypoints.append(np.zeros(34))
+                self.p2_keypoints.append(np.zeros(26))
         else:
-            self.p2_keypoints.append(np.zeros(34))
+            self.p2_keypoints.append(np.zeros(26))
             
         return image
     
@@ -102,6 +102,9 @@ class PoseExtractor:
         """
         results = self.pose_model.predict(patch, boxes=False)
         kpts = results[0].keypoints.xyn[0].cpu().numpy().flatten()
+
+        # ear와 eye에 관련된 값 삭제
+        kpts = np.concatenate([kpts[:2], kpts[10:]])
 
         player_patch = results[0].plot(kpt_radius=3, line_width=self.line_width, boxes=False)
 

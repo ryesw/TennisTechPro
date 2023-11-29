@@ -1,185 +1,94 @@
+import cv2
 import numpy as np
-from scipy.signal import find_peaks
-import matplotlib.pyplot as plt
-from utils import center_of_box
-
 from tensorflow.keras.models import load_model
-
 
 class ActionRecognition:
     def __init__(self):
-        self.model = load_model('models/gru/gru64masking.h5')
-        self.seq_length = 60
-        self.motions = ['backhand', 'forehand', 'service', 'smash', 'backhand_volley', 'forehand_volley']
-        self.player1_predictions = {}
-        self.player2_predictions = {}
-
-    def predict(self, tracker, p1_keypoints_df, p2_keypoints_df, ball_positions, total_frame):
-        p1_boxes = tracker.player1_boxes
-        p2_boxes = tracker.player2_boxes
-
-        p1_motion_frames = find_p1_motion_frame(p1_boxes, ball_positions, p1_keypoints_df)
-        p2_motion_frames = find_p2_motion_frame(p2_boxes, ball_positions, p2_keypoints_df)
-
-        for frame_num in p1_motion_frames:
-            probs, motion = self.predict_p1_motion(frame_num, p1_keypoints_df, total_frame)
-            self.player1_predictions[frame_num] = {'probs': probs, 'motion': motion}
-            
-        for frame_num in p2_motion_frames:
-            probs, motion = self.predict_p2_motion(frame_num, p2_keypoints_df, total_frame)
-            self.player2_predictions[frame_num] = {'probs': probs, 'motion': motion}
-
-        return self.player1_predictions, self.player2_predictions
-
-    def predict_p1_motion(self, frame_num, p1_keypoints_df, total_frame):
-        p1_keypoints_df = p1_keypoints_df.drop(p1_keypoints_df.columns[2:10], axis=1) # eye와 ear에 관련된 column 제거
-        p1_keypoints = p1_keypoints_df.values
-
-        # bottom player의 좌표를 좌우 대칭
-        # p1_keypoints = np.array([[1 - value if index % 2 == 0 else value for index, value in enumerate(inner_list)] for inner_list in p1_keypoints])
-
-        mid = int(self.seq_length // 2)
-        before_row = max(0, frame_num - mid - 1)
-        after_row = min(before_row + self.seq_length, total_frame)
-        
-        if before_row == 0:
-            kpts = p1_keypoints[before_row : before_row + self.seq_length]
-        elif after_row == total_frame:
-            kpts = p1_keypoints[after_row - self.seq_length : after_row]
-        else:
-            kpts = p1_keypoints[before_row : after_row]
-
-        kpts = np.array(kpts).reshape(1, self.seq_length, 26)
-        probs = self.model.predict(kpts)[0]
-        idx = np.argmax(probs)
-
-        return probs[idx], self.motions[idx]
-
-    def predict_p2_motion(self, frame_num, p2_keypoints_df, total_frame):
-        p2_keypoints_df = p2_keypoints_df.drop(p2_keypoints_df.columns[2:10], axis=1) # eye와 ear에 관련된 column 제거
-        p2_keypoints = p2_keypoints_df.values
-
-        mid = int(self.seq_length // 2)
-        before_row = max(0, frame_num - mid - 1)
-        after_row = min(before_row + self.seq_length, total_frame)
-
-        if before_row == 0:
-            kpts = p2_keypoints[before_row : before_row + self.seq_length]
-        elif after_row == total_frame:
-            kpts = p2_keypoints[after_row - self.seq_length : after_row]
-        else:
-            kpts = p2_keypoints[before_row : after_row]
-            
-        kpts = np.array(kpts).reshape(1, self.seq_length, 26)
-        probs = self.model.predict(kpts)[0]
-        idx = np.argmax(probs)
-
-        return probs[idx], self.motions[idx]
-
-
-def find_p1_motion_frame(p1_boxes, ball_positions, p1_keypoints_df):
-    left_wrist_index = 18
-    right_wrist_index = 20
-    left_wrist_pos = p1_keypoints_df.iloc[:, [left_wrist_index, left_wrist_index+1]].values
-    right_wrist_pos = p1_keypoints_df.iloc[:, [right_wrist_index, right_wrist_index+1]].values
-
-    peaks, _ = find_peaks(ball_positions[:, 1])
-
-    dists = []
-    for i, p1_box in enumerate(p1_boxes):
-        if p1_box is not None:
-            player_center = center_of_box(p1_box)
-            ball_pos = np.array(ball_positions[i, :])
-            box_dist = np.linalg.norm(player_center - ball_pos)
-            left_wrist_dist, right_wrist_dist = np.inf, np.inf
-
-            if left_wrist_pos[i, 0] > 0:
-                left_wrist_dist = np.linalg.norm(left_wrist_pos[i, :] - ball_pos)
-
-            if right_wrist_pos[i, 0] > 0:
-                right_wrist_dist = np.linalg.norm(right_wrist_pos[i, :] - ball_pos)
-
-            dists.append(min(box_dist, left_wrist_dist, right_wrist_dist))
-        else:
-            dists.append(None)
-    dists = np.array(dists)
-
-    p1_motion_indices = []
-    print('p1 peaks: ', peaks)
-    # for peak in peaks:
-    #     player_box_height = max(p1_boxes[peak][3] - p1_boxes[peak][1], 130)
-    #     if dists[peak] < (player_box_height * 4 / 5):
-    #         p1_motion_indices.append(peak)
-    p1_motion_indices = peaks
-
-    while True:
-        diffs = np.diff(p1_motion_indices)
-        to_del = []
-        for i, diff in enumerate(diffs):
-            if diff < 40:
-                max_in = np.argmax([dists[p1_motion_indices[i]], dists[p1_motion_indices[i + 1]]])
-                to_del.append(i + max_in)
-
-        p1_motion_indices = np.delete(p1_motion_indices, to_del)
-        if len(to_del) == 0:
-            break
-
-    plt.plot(ball_positions[:, 1])
-    plt.plot(peaks, ball_positions[:, 1][peaks], 'x')
-    plt.show()
+        self.model = load_model('models/gru/gru80_seq36.h5', compile=False)
+        self.model.compile()
+        self.seq_length = 36
+        self.motions = ['backhand', 'forehand', 'serve/smash', 'volley']
     
-    print('p1 motion indices: ', p1_motion_indices)
-    return p1_motion_indices
-
-def find_p2_motion_frame(p2_boxes, ball_positions, p2_keypoints_df):
-    left_wrist_index = 18
-    right_wrist_index = 20
-    left_wrist_pos = p2_keypoints_df.iloc[:, [left_wrist_index, left_wrist_index+1]].values
-    right_wrist_pos = p2_keypoints_df.iloc[:, [right_wrist_index, right_wrist_index+1]].values
-
-    peaks, _ = find_peaks(ball_positions[:, 1] * (-1))
-    dists = []
-    for i, p1_box in enumerate(p2_boxes):
-        if p1_box is not None:
-            player_center = center_of_box(p1_box)
-            ball_pos = np.array(ball_positions[i, :])
-            box_dist = np.linalg.norm(player_center - ball_pos)
-            left_wrist_dist, right_wrist_dist = np.inf, np.inf
-
-            if left_wrist_pos[i, 0] > 0:
-                left_wrist_dist = np.linalg.norm(left_wrist_pos[i, :] - ball_pos)
-
-            if right_wrist_pos[i, 0] > 0:
-                right_wrist_dist = np.linalg.norm(right_wrist_pos[i, :] - ball_pos)
-
-            dists.append(min(box_dist, left_wrist_dist, right_wrist_dist))
+    def predict_players_motion(self, frame, frame_num, p1_keypoints, p2_keypoints):
+        """Sequence 길이만큼 Pose를 추정했을 때 선수들의 동작을 예측"""
+        if frame_num >= self.seq_length - 1:
+            # Player 1의 동작 예측
+            p1_kpts = p1_keypoints[frame_num - self.seq_length + 1 : frame_num + 1]
+            p1_kpts = np.array(p1_kpts).reshape(1, self.seq_length, 26)
+            p1_probs = self.model.predict(p1_kpts)[0]
+            
+            # Player 2의 동작 예측
+            p2_kpts = p2_keypoints[frame_num - self.seq_length + 1 : frame_num + 1]
+            p2_kpts = np.array(p2_kpts).reshape(1, self.seq_length, 26)
+            p2_probs = self.model.predict(p2_kpts)[0]
         else:
-            dists.append(None)
-    dists = np.array(dists)
+            p1_probs = np.zeros(4)
+            p2_probs = np.zeros(4)
 
-    p2_motion_indices = []
-    print('p2 peaks: ', peaks)
-    # for peak in peaks:
-    #     player_box_height = max(p2_boxes[peak][3] - p2_boxes[peak][1], 130)
-    #     if dists[peak] < (player_box_height * 4 / 5):
-    #         p2_motion_indices.append(peak)
-    p2_motion_indices = peaks
+        frame = draw_probs(frame, p1_probs, 1)
+        frame = draw_probs(frame, p2_probs, 2)
+        return frame
+    
+def draw_probs(frame, probs, player):
+    """각 선수들의 동작을 예측한 확률을 Dynamic Bar로 표현"""
+    TEXT_ORIGIN_X = 20
+    SPACE_BETWEEN_BARS = 60
+    BAR_WIDTH = 40
+    BAR_ORIGIN_X = 15
+    BAR_HEIGHT = 200
 
-    while True:
-        diffs = np.diff(p2_motion_indices)
-        to_del = []
-        for i, diff in enumerate(diffs):
-            if diff < 40:
-                max_in = np.argmax([dists[p2_motion_indices[i]], dists[p2_motion_indices[i + 1]]])
-                to_del.append(i + max_in)
+    if player == 1:
+        MARGIN_ABOVE_BAR = frame.shape[0] * 2 // 3
+        y = frame.shape[0] - 100
+        color = (255, 0, 255)
+    elif player == 2:
+        MARGIN_ABOVE_BAR = frame.shape[0] // 9
+        y = int(frame.shape[0] / 2.8)
+        color = (255, 255, 0)
 
-        p2_motion_indices = np.delete(p2_motion_indices, to_del)
-        if len(to_del) == 0:
-            break
+    cv2.putText(frame, "B", (TEXT_ORIGIN_X, y), cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=3) # Backhand
+    cv2.putText(frame, "F", (TEXT_ORIGIN_X + SPACE_BETWEEN_BARS, y), cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=3) # Forehand
+    cv2.putText(frame, "S", (TEXT_ORIGIN_X + SPACE_BETWEEN_BARS * 2, y), cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=3) # Serve/Smash
+    cv2.putText(frame, "V", (TEXT_ORIGIN_X + SPACE_BETWEEN_BARS * 3, y), cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=3) # Volley
 
-    plt.plot(ball_positions[:, 1] * (-1))
-    plt.plot(peaks, (ball_positions[:, 1] * (-1))[peaks], 'x')
-    plt.show()
+    # Backhand
+    cv2.rectangle(frame,
+                    (BAR_ORIGIN_X, int(BAR_HEIGHT + MARGIN_ABOVE_BAR - BAR_HEIGHT * probs[0])),
+                    (BAR_ORIGIN_X + BAR_WIDTH, BAR_HEIGHT + MARGIN_ABOVE_BAR),
+                    color=color,
+                    thickness=-1
+                    )
+    
+    # Forehand
+    cv2.rectangle(frame,
+                    (BAR_ORIGIN_X + SPACE_BETWEEN_BARS, int(BAR_HEIGHT + MARGIN_ABOVE_BAR - BAR_HEIGHT * probs[1])),
+                    (BAR_ORIGIN_X + SPACE_BETWEEN_BARS + BAR_WIDTH, BAR_HEIGHT + MARGIN_ABOVE_BAR),
+                    color=color,
+                    thickness=-1
+                    )
+    
+    # Serve/Smash
+    cv2.rectangle(frame,
+                    (BAR_ORIGIN_X + SPACE_BETWEEN_BARS * 2, int(BAR_HEIGHT + MARGIN_ABOVE_BAR - BAR_HEIGHT * probs[2])),
+                    (BAR_ORIGIN_X + SPACE_BETWEEN_BARS * 2 + BAR_WIDTH, BAR_HEIGHT + MARGIN_ABOVE_BAR),
+                    color=color,
+                    thickness=-1
+                    )
+    
+    # Volley
+    cv2.rectangle(frame,
+                    (BAR_ORIGIN_X + SPACE_BETWEEN_BARS * 3, int(BAR_HEIGHT + MARGIN_ABOVE_BAR - BAR_HEIGHT * probs[3])),
+                    (BAR_ORIGIN_X + SPACE_BETWEEN_BARS * 3 + BAR_WIDTH, BAR_HEIGHT + MARGIN_ABOVE_BAR),
+                    color=color,
+                    thickness=-1
+                    )      
 
-    print('p2 motion indices: ', p2_motion_indices)
-    return p2_motion_indices
+    for i in range(4):
+        cv2.rectangle(frame,
+                (BAR_ORIGIN_X + SPACE_BETWEEN_BARS * i, int(MARGIN_ABOVE_BAR)),
+                (BAR_ORIGIN_X + SPACE_BETWEEN_BARS * i + BAR_WIDTH, BAR_HEIGHT + MARGIN_ABOVE_BAR),
+                color=(255, 255, 255),
+                thickness=1
+                )
+
+    return frame
