@@ -138,7 +138,7 @@ class BallDetector:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # Load TrackNet model weights
         self.detector = BallTrackNet(out_channels=out_channels)
-        saved_state_dict = torch.load(save_state)
+        saved_state_dict = torch.load(save_state, map_location=self.device)
         self.detector.load_state_dict(saved_state_dict['model_state'])
         self.detector.eval().to(self.device)
 

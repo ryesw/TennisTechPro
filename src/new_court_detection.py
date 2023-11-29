@@ -25,7 +25,7 @@ class CourtDetector:
         self.model_output_height = 360
         
         # pretrained model 불러오기
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cpu')
         self.detector = BallTrackerNet(out_channels=out_channels)
         self.detector = self.detector.to(self.device)
         self.detector.load_state_dict(torch.load('models/model_tennis_court_det.pt', map_location=self.device))
