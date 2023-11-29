@@ -178,6 +178,6 @@ def process(input_video_path, output_video_path):
     pose_extractor.print_counts()
 
 if __name__ == '__main__':
-    input_video_path = 'test/video_input3.mp4'
+    input_video_path = 'test/video_input1.mp4'
     output_video_path = 'output/output.mp4'
     process(input_video_path, output_video_path)
