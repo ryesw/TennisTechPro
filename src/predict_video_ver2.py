@@ -166,20 +166,8 @@ def process(input_video_path, output_video_path):
     ball_detector.preprocessing_ball_coords()
     print('전처리 후 \n', ball_detector.xy_coordinates)
 
-<<<<<<< HEAD
-    # Fourth Part: Action Recognition
-    p1_df, p2_df = pose_extractor.save_to_csv() # 선수들의 pose를 추정한 좌표를 저장
-    p1_predictions, p2_predictions = action_recognition.predict(tracker, p1_df, p2_df, ball_detector.xy_coordinates, frame_num)
-    print('p1_motions\n', p1_predictions)
-    print('p2_motions\n', p2_predictions)
-
-    # Fifth Part: Add minimap in video
-    #create_minimap(court_detector, ball_detector, fps)
-    create_minimap(court_detector, tracker, ball_detector, fps, p1_predictions, p2_predictions) # minimap video를 생성
-=======
     # Fourth Part: Add minimap in video
     create_minimap(court_detector, tracker, ball_detector, fps) # minimap video를 생성
->>>>>>> e55074ae359823e90594987c54bea6277763267b
     add_minimap(output_video_path) # output video와 minimap video를 합친 하나의 video 생성
     
     # Measure processing time
