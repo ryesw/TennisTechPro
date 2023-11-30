@@ -1,9 +1,6 @@
-
 import cv2
 import imutils
 import time
-
-
 
 from court_detection import CourtDetector
 from object_tracking import Tracker
