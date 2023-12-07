@@ -1,40 +1,19 @@
-import os
-import cv2
-import torch
 import numpy as np
 import pandas as pd
-
 from ultralytics import YOLO
-from ultralytics.utils.plotting import Annotator
-
 
 class PoseExtractor:
-    def __init__(self, person_num=2, box=False, dtype=torch.FloatTensor):
+    def __init__(self):
         self.pose_model = YOLO('yolo/yolov8n-pose.pt')
-        self.dtype = dtype
-        self.person_num = person_num  # 단식: 2명, 복식: 4명
-        self.box = box # box 표시할건지
-        self.PERSON_LABEL = None
-        self.SCORE_MIN = 0.90
-        self.keypoint_threshold = 2
         self.p1_keypoints = []
         self.p2_keypoints = []
         self.line_width = 2
         self.margin = 15
-        self.player_1_count = 0
-        self.player_2_count = 0
-        self.line_connection = [(7, 9), (7, 5), (10, 8), (8, 6), (6, 5), (15, 13),
-                                (13, 11), (11, 12), (12, 14), (14, 16), (5, 11), (12, 6)] # Court Line
         self.COCO_PERSON_KEYPOINT_NAMES = [
             'nose', 'left_shoulder', 'right_shoulder', 'left_elbow',
             'right_elbow', 'left_wrist', 'right_wrist', 'left_hip', 'right_hip', 'left_knee', 'right_knee',
             'left_ankle', 'right_ankle'
-        ] # 'left_eye', 'right_eye', 'left_ear', 'right_ear' 제거
-        self.AIHUB_PERSON_KEYPOINT_NAMES = [
-            'head', 'neck', 'chst', 'bely', 'sdlf', 'sdrt', 'eblf', 'ebrt', 'wtlf', 'wtrt', 'hplf', 'hprt', 'knlf', 'knrt', 'aklf', 'akrt'
-            ]
-        self.player = ['target']
-
+        ]
 
     def extract_pose(self, image, p1_boxes, p2_boxes):
         """
@@ -44,7 +23,6 @@ class PoseExtractor:
         result = self._extract_player2_pose(result, p2_boxes)
 
         return result
-
 
     def _extract_player1_pose(self, image, p1_boxes):
         """
@@ -70,7 +48,6 @@ class PoseExtractor:
 
         return image
 
-
     def _extract_player2_pose(self, image, p2_boxes):
         """
         Extract the pose of player 2(top) from the given image
@@ -95,7 +72,6 @@ class PoseExtractor:
             
         return image
     
-
     def _annotate_pose_on_patch(self, patch):
         """
         Annotate the pose on a patch of the image
@@ -109,12 +85,6 @@ class PoseExtractor:
         player_patch = results[0].plot(kpt_radius=3, line_width=self.line_width, boxes=False)
 
         return player_patch, kpts
-    
-    
-    def print_counts(self):
-        print('Player 1 Pose Estimation Count: ', self.player_1_count)
-        print('Player 2 Pose Estimation Count: ', self.player_2_count)
-
 
     def save_to_csv(self):
         columns = [f'{keypoint}_{coord}' for keypoint in self.COCO_PERSON_KEYPOINT_NAMES for coord in ['x', 'y']]
