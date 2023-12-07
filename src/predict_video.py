@@ -6,7 +6,7 @@ from court_detection import CourtDetector
 from object_tracking import Tracker
 from pose import PoseExtractor
 from action_recognition import ActionRecognition
-from ball_detection_pytorch import BallDetector
+from ball_detection import BallDetector
 from utils import get_video_properties
 
 def merge(frame, image):
