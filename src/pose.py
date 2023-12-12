@@ -33,14 +33,13 @@ class PoseExtractor:
         if p1_boxes is not None:
             x1, y1, x2, y2 = p1_boxes # p1_boxes[-1]
             xt, yt, xb, yb = int(x1), int(y1), int(x2), int(y2)
-            patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
+            patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy()
 
             p1_patch, kpts = self._annotate_pose_on_patch(patch)
             image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p1_patch
             
             if len(kpts) != 0:
                 self.p1_keypoints.append(kpts)
-                self.player_1_count += 1
             else:
                 self.p1_keypoints.append(np.zeros(26))
         else:
@@ -57,14 +56,13 @@ class PoseExtractor:
         if p2_boxes is not None:
             x1, y1, x2, y2 = p2_boxes # p2_boxes[-1]
             xt, yt, xb, yb = int(x1), int(y1), int(x2), int(y2)
-            patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy() # copy 안하면 오류남^^
+            patch = image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)].copy()
             
             p2_patch, kpts = self._annotate_pose_on_patch(patch)
             image[max(yt - self.margin, 0):min(yb + self.margin, height), max(xt - self.margin, 0):min(xb + self.margin, width)] = p2_patch
             
             if len(kpts) != 0:
                 self.p2_keypoints.append(kpts)
-                self.player_2_count += 1
             else:
                 self.p2_keypoints.append(np.zeros(26))
         else:
