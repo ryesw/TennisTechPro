@@ -161,5 +161,5 @@ def process(input_video_path, output_video_path):
 
 if __name__ == '__main__':
     input_video_path = 'test/video_input1.mp4'
-    output_video_path = 'output/output.mp4'
+    output_video_path = 'output/video1/output.mp4'
     process(input_video_path, output_video_path)
