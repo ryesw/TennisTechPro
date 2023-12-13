@@ -22,16 +22,16 @@
 
 ## 📌Objectives
 <ul>
-  <li>Detect the players</li>
-  <li>Estimate player's pose and motion</li>
-  <li>Detect court lines </li>
-  <li>Track the ball on a court minimap</li>
-  <li>Judge the In and Out of the ball</li>
+  <li>Track two tennis players</li>
+  <li>Estimate two players pose</li>
+  <li>Classify two players motion</li>
+  <li>Detect tennis court lines</li>
+  <li>Detect and Track the tennis ball</li>
+  <li>Tennis Match Minimap</li>
 </ul>
 
 ## Data
 <ul>
-  <li><a href="https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=realm&dataSetSn=71612">AI Hub 테니스 동작 및 경기영상 데이터</a></li>
   <li><a href="http://thetis.image.ece.ntua.gr/">THETIS Dataset</a></li>
 </ul>
 
@@ -40,6 +40,8 @@
   <li><a href="https://github.com/avivcaspi/TennisProject">Tennis Project</a> @avivcaspi</li>
   <li><a href="https://github.com/MaximeBataille/tennis_tracking">Tennis_Tracking</a> @MaximeBataille</li>
   <li><a href="https://github.com/ArtLabss/tennis-tracking">Tennis-Tracking</a> @ArtLabss</li>
+  <li><a href="https://github.com/antoinekeller/tennis_shot_recognition">tennis_shot_recognition</a> @antoinekeller</li>
+  <li><a href="https://github.com/chow-vincent/tennis_action_recognition">tennis_action_recognition</a> @chow-vincent</li>
   <li><a href="https://nol.cs.nctu.edu.tw:234/open-source/TrackNet/tree/master/Code_Python3">TrackNet</a></li>
   <li><a href="https://github.com/hgupt3/TRACE">TRACE</a> @hgupt3</li>
 </ul>
