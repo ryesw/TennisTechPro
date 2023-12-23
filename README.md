@@ -38,7 +38,7 @@
 ## Result
 Input            |  Output
 :-------------------------:|:-------------------------:
-![input_img1](https://github.com/ryesw/TennisTechPro/blob/main/gif/in_1.gif))  |  ![output_img1](https://github.com/ryesw/TennisTechPro/blob/main/gif/out_1.gif)
+![input_img1](https://github.com/ryesw/TennisTechPro/blob/main/gif/in_1.gif)  |  ![output_img1](https://github.com/ryesw/TennisTechPro/blob/main/gif/out_1.gif)
 ![input_img2](https://github.com/ryesw/TennisTechPro/blob/main/gif/in_2.gif)  |  ![output_img2](https://github.com/ryesw/TennisTechPro/blob/main/gif/out_2.gif)
 ![input_img3](https://github.com/ryesw/TennisTechPro/blob/main/gif/in_5.gif)  |  ![output_img3](https://github.com/ryesw/TennisTechPro/blob/main/gif/out_5.gif)
 
