@@ -22,7 +22,7 @@ def merge(frame, image):
 
     return frame
 
-def create_minimap(court_detector, tracker, ball_detector, fps):
+def create_minimap(output_video_path, court_detector, tracker, ball_detector, fps):
     """
     Creates top view video of the gameplay
     """
@@ -32,7 +32,7 @@ def create_minimap(court_detector, tracker, ball_detector, fps):
     court = cv2.cvtColor(court, cv2.COLOR_GRAY2BGR)
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter('output/minimap.mp4', fourcc, fps, (v_width, v_height))
+    out = cv2.VideoWriter(output_video_path + 'minimap.mp4', fourcc, fps, (v_width, v_height))
 
     # Marking players location on court
     frame_num = 0
@@ -51,15 +51,15 @@ def create_minimap(court_detector, tracker, ball_detector, fps):
     out.release()
 
 def add_minimap(output_video_path):
-    video = cv2.VideoCapture('output/analysis.mp4')
+    video = cv2.VideoCapture(output_video_path + 'analysis.mp4')
     fps, length, v_width, v_height = get_video_properties(video)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
-    output_video = cv2.VideoWriter(output_video_path, fourcc, fps, (v_width, v_height))
+    output_video = cv2.VideoWriter(output_video_path + 'output.mp4', fourcc, fps, (v_width, v_height))
     
     print('Adding the minimap...')
 
-    minimap_video = cv2.VideoCapture('output/minimap.mp4')
+    minimap_video = cv2.VideoCapture(output_video_path + 'minimap.mp4')
     while True:
         ret, frame = video.read()
         ret2, minimap_frame = minimap_video.read()
@@ -85,7 +85,7 @@ def process(input_video_path, output_video_path):
 
     # Output Video
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    analysis_video = cv2.VideoWriter('output/analysis.mp4', fourcc, fps, (v_width, v_height))
+    analysis_video = cv2.VideoWriter(output_video_path + 'analysis.mp4', fourcc, fps, (v_width, v_height))
 
     # Initialize
     court_detector = CourtDetector() # Court Detector
@@ -155,11 +155,11 @@ def process(input_video_path, output_video_path):
     ball_detector.preprocessing_ball_coords()
 
     # Fourth Part: Add minimap in video
-    create_minimap(court_detector, tracker, ball_detector, fps) # minimap video를 생성
+    create_minimap(output_video_path, court_detector, tracker, ball_detector, fps) # minimap video를 생성
     add_minimap(output_video_path) # output video와 minimap video를 합친 하나의 video 생성
 
 
 if __name__ == '__main__':
     input_video_path = 'test/video_input1.mp4'
-    output_video_path = 'output/video1/output.mp4'
+    output_video_path = 'output/video1/'
     process(input_video_path, output_video_path)
