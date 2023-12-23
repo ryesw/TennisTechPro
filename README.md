@@ -55,7 +55,7 @@ git clone https://github.com/ryesw/TennisTechPro
 input_video_path = 'test/video_input1.mp4'
 output_video_path = 'output/video1/'
 ```
-
+4. Execute!
 
 ## Helpful Repositories
 <ul>
