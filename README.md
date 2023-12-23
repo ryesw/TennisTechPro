@@ -38,9 +38,9 @@
 ## Result
 Input            |  Output
 :-------------------------:|:-------------------------:
-![input_img1](https://github.com/ryesw/TennisTechPro/tree/main/gif/in_1)  |  ![output_img1](https://github.com/ryesw/TennisTechPro/tree/main/gif/out_1)
-![input_img2](https://github.com/ryesw/TennisTechPro/tree/main/gif/in_2)  |  ![output_img2](https://github.com/ryesw/TennisTechPro/tree/main/gif/out_2)
-![input_img3](https://github.com/ryesw/TennisTechPro/tree/main/gif/in_5)  |  ![output_img3](https://github.com/ryesw/TennisTechPro/tree/main/gif/out_5)
+![input_img1](https://github.com/ryesw/TennisTechPro/tree/main/gif/in_1.gif)  |  ![output_img1](https://github.com/ryesw/TennisTechPro/tree/main/gif/out_1.gif)
+![input_img2](https://github.com/ryesw/TennisTechPro/tree/main/gif/in_2.gif)  |  ![output_img2](https://github.com/ryesw/TennisTechPro/tree/main/gif/out_2.gif)
+![input_img3](https://github.com/ryesw/TennisTechPro/tree/main/gif/in_5.gif)  |  ![output_img3](https://github.com/ryesw/TennisTechPro/tree/main/gif/out_5.gif)
 
 ## How to Run
 1. Clone this repository
